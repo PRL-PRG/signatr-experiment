@@ -48,6 +48,14 @@ docs/
 # translation temp files
 po/*~
 
+# CRAN and library
+CRAN/
+library/
+instrumentr/
+injectr/
+runr/
+docker-image/
+
 ################################################################################
 ## C++ gitignore
 ## https://raw.githubusercontent.com/github/gitignore/master/C%2B%2B.gitignore
