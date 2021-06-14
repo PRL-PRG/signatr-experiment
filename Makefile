@@ -44,7 +44,7 @@ WRAP_TEMPLATE_FILE := $(SCRIPTS_DIR)/wrap-template.R
 ########################################################################
 
 # runnable code
-EXTRACTED_CODE_DIR   := $(RUN_DIR)/runnable-code
+EXTRACTED_CODE_DIR   := $(RUN_DIR)/extracted-code
 EXTRACTED_CODE_CSV   := $(EXTRACTED_CODE_DIR)/runnable-code.csv
 EXTRACTED_CODE_STATS := $(EXTRACTED_CODE_DIR)/parallel.csv
 
