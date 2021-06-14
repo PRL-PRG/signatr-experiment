@@ -2,117 +2,264 @@
 MAKEFLAGS += --no-builtin-rules
 .SUFFIXES:
 
-# extra parameters
-JOBS          ?= 16
-PACKAGES_FILE ?= packages-100.txt
-TIMEOUT       ?= 30m
+R_DIR             := /R/R-dyntrace
+R_BIN             := $(R_DIR)/bin/R
 
-R_PROJECT_BASE_DIR ?= /R
+PROJECT_BASE_DIR  := $(CURDIR)
+LIBRARY_DIR       := $(PROJECT_BASE_DIR)/library
+CRAN_DIR          := $(PROJECT_BASE_DIR)/CRAN
+CRAN_MIRROR       := https://cloud.r-project.org
+CRAN_LOCAL_MIRROR := file://$(CRAN_DIR)
+CRAN_SRC_DIR      := $(CRAN_DIR)/extracted
+CRAN_ZIP_DIR      := $(CRAN_DIR)/src/contrib
+SCRIPTS_DIR       := $(CURDIR)/scripts
+RUNR_DIR          := $(CURDIR)/runr
+RUNR_TASKS_DIR    := $(RUNR_DIR)/inst/tasks
 
-# environment
-R_DIR              := $(R_PROJECT_BASE_DIR)/R-dyntrace
-PACKAGES_SRC_DIR   := $(R_PROJECT_BASE_DIR)/CRAN/extracted
-PACKAGES_ZIP_DIR   := $(R_PROJECT_BASE_DIR)/CRAN/src/contrib
-CRAN_LOCAL_MIRROR  := file://$(R_PROJECT_BASE_DIR)/CRAN
-R_BIN              := $(R_DIR)/bin/R
+# this is where the results shoud go to
+RUN_DIR := $(PROJECT_BASE_DIR)/run
 
-RUNR_DIR           := $(CURDIR)/runr
-RUNR_TASKS_DIR     := $(RUNR_DIR)/inst/tasks
-SCRIPTS_DIR        := $(CURDIR)/scripts
-RUN_DIR            := $(CURDIR)/run
-DATA_DIR           := $(CURDIR)/data
-SIGNATR_DIR        := $(CURDIR)/signatr
+# This file contains a list of all packages we want to include.
+PACKAGES := packages.txt
 
-PACKAGE_METADATA_DIR := $(RUN_DIR)/package-metadata
+# the number of jobs to run in parallel
+# it is used for GNU parallel and for Ncpus parameter in install.packages
+JOBS          ?= $(shell sysctl -n hw.ncpu 2>/dev/null || nproc -a 2>/dev/null || grep -c processor /proc/cpuinfo 2>/dev/null || echo 1)
+# TODO: do not rely on GNU parallel timeout, use timeout binary
+TIMEOUT       ?= 35m
 
-# variables
-MERGE_CSV := $(R_DIR)/bin/Rscript $(RUNR_DIR)/inst/merge-csv.R
-ON_EACH_PACKAGE := $(MAKE) on-each-package
+# tools
+MAP				:= $(RUNR_DIR)/inst/map.sh -j $(JOBS) $(MAP_EXTRA)
+R					:= R_LIBS=$(LIBRARY_DIR) $(R_DIR)/bin/R
+RSCRIPT		:= R_LIBS=$(LIBRARY_DIR) $(R_DIR)/bin/Rscript
+MERGE     := $(RSCRIPT) $(RUNR_DIR)/inst/merge-files.R
+ROLLBACK  := $(SCRIPTS_DIR)/rollback.sh
+CAT       := $(SCRIPTS_DIR)/cat.R
 
-# runs
-PACKAGE_COVERAGE_CSV   := $(RUN_DIR)/package-coverage/coverage.csv
-PACKAGE_COVERAGE_STATS := $(RUN_DIR)/package-coverage/task-stats.csv
+# A template that is used to wrap the extracted runnable code from packages.
+WRAP_TEMPLATE_FILE := $(SCRIPTS_DIR)/wrap-template.R
 
-PACKAGE_CODE_SIGNATR_CSV   := $(RUN_DIR)/package-code-signatr/runnable-code.csv
-PACKAGE_CODE_SIGNATR_STATS := $(RUN_DIR)/package-code-signatr/task-stats.csv
-SIGNATR_GBOV_RUN_CSV       := $(RUN_DIR)/signatr-gbov/run.csv
-SIGNATR_GBOV_STATS         := $(RUN_DIR)/signatr-gbov/task-stats.csv
+########################################################################
+# TASKS OUTPUTS
+########################################################################
 
-PACKAGE_FUNCTIONS_CSV  := $(PACKAGE_METADATA_DIR)/functions.csv
-PACKAGE_METADATA_CSV   := $(PACKAGE_METADATA_DIR)/metadata.csv
-PACKAGE_REVDEPS_CSV    := $(PACKAGE_METADATA_DIR)/revdeps.csv
-PACKAGE_SLOC_CSV       := $(PACKAGE_METADATA_DIR)/sloc.csv
-PACKAGE_METADATA_FILES := $(PACKAGE_FUNCTIONS_CSV) $(PACKAGE_METADATA_CSV) $(PACKAGE_REVDEPS_CSV) $(PACKAGE_SLOC_CSV)
-PACKAGE_METADATA_STATS := $(PACKAGE_METADATA_DIR)/task-stats.csv
+# runnable code
+EXTRACTED_CODE_DIR   := $(RUN_DIR)/runnable-code
+EXTRACTED_CODE_CSV   := $(EXTRACTED_CODE_DIR)/runnable-code.csv
+EXTRACTED_CODE_STATS := $(EXTRACTED_CODE_DIR)/parallel.csv
 
-.PHONY: \
-  lib \
-	libs \
-  on-each-package \
-  package-coverage \
-  package-metadata \
-  package-code-signatr \
-  signatr-gbov
+# tracing runnable code
+WRAPPED_CODE_DIR   := $(RUN_DIR)/wrapped-code
+WRAPPED_CODE_CSV   := $(WRAPPED_CODE_DIR)/runnable-code.csv
+WRAPPED_CODE_STATS := $(WRAPPED_CODE_DIR)/parallel.csv
 
-lib/%:
-	R CMD INSTALL $*
+# run the extracted code - for sanity checking
+RUN_CODE_DIR   := $(RUN_DIR)/run-code
+RUN_CODE_STATS := $(RUN_CODE_DIR)/parallel.csv
 
-libs: lib/injectr lib/instrumentr lib/runr lib/signatr
+# tracing - getting the db
+TRACE_DIR   := $(RUN_DIR)/trace
+TRACE_STATS := $(TRACE_DIR)/parallel.csv
 
-$(PACKAGE_CODE_SIGNATR_CSV) $(PACKAGE_CODE_SIGNATR_STATS): export OUTPUT_DIR=$(@D)
-$(PACKAGE_CODE_SIGNATR_CSV) $(PACKAGE_CODE_SIGNATR_STATS):
-	$(ON_EACH_PACKAGE) TASK=$(SIGNATR_DIR)/inst/package-runnable-code-signatr.R
-	$(MERGE_CSV) "$(OUTPUT_DIR)" $(@F) $(notdir $(PACKAGE_CODE_SIGNATR_STATS))
+########################################################################
+# HELPERS                                                              #
+########################################################################
 
-$(SIGNATR_GBOV_RUN_CSV) $(SIGNATR_GBOV_STATS): $(PACKAGE_CODE_SIGNATR_CSV)
-$(SIGNATR_GBOV_RUN_CSV) $(SIGNATR_GBOV_STATS): export OUTPUT_DIR=$(@D)
-$(SIGNATR_GBOV_RUN_CSV) $(SIGNATR_GBOV_STATS): export START_XVFB=1
-$(SIGNATR_GBOV_RUN_CSV) $(SIGNATR_GBOV_STATS):
-	$(ON_EACH_PACKAGE) R_DIR=$(RDT_DIR) TASK=$(RUNR_TASKS_DIR)/run-extracted-code.R ARGS="$(dir $(PACKAGE_CODE_SIGNATR_CSV))/{1/}"
-	$(MERGE_CSV) "$(OUTPUT_DIR)" $(@F) $(notdir $(SIGNATR_GBOV_STATS))
+txtbold := $(shell tput bold)
+txtred  := $(shell tput setaf 2)
+txtsgr0 := $(shell tput sgr0)
 
-$(PACKAGE_COVERAGE_CSV) $(PACKAGE_COVERAGE_STATS): export OUTPUT_DIR=$(@D)
-$(PACKAGE_COVERAGE_CSV) $(PACKAGE_COVERAGE_STATS): export RUNR_PACKAGE_COVERAGE_TYPE=all
-$(PACKAGE_COVERAGE_CSV) $(PACKAGE_COVERAGE_STATS):
-	$(ON_EACH_PACKAGE) TASK=$(RUNR_TASKS_DIR)/package-coverage.R
-	$(MERGE_CSV) "$(OUTPUT_DIR)" $(@F) $(notdir $(PACKAGE_COVERAGE_STATS))
+define LOG
+	@echo -n "$(txtbold)"
+	@echo "----------------------------------------------------------------------"
+	@echo "=> $(txtred)$(1)$(txtsgr0)"
+	@echo -n "$(txtbold)"
+	@echo "----------------------------------------------------------------------"
+	@echo -n "$(txtsgr0)"
+endef
 
-$(PACKAGE_METADATA_FILES) $(PACKAGE_METADATA_STATS): export OUTPUT_DIR=$(@D)
-$(PACKAGE_METADATA_FILES) $(PACKAGE_METADATA_STATS):
-	$(ON_EACH_PACKAGE) TASK=$(RUNR_TASKS_DIR)/package-metadata.R
-	$(MERGE_CSV) "$(@D)" task-stats.csv functions.csv metadata.csv revdeps.csv sloc.csv
+define PKG_INSTALL_FROM_FILE
+	$(R) --quiet --no-save -e 'install.packages(if (Sys.getenv("FORCE_INSTALL")=="1") readLines("$(1)") else setdiff(readLines("$(1)"), installed.packages()), dependencies=TRUE, destdir="$(CRAN_ZIP_DIR)", repos="$(CRAN_MIRROR)", Ncpus=$(JOBS))'
+	find $(CRAN_ZIP_DIR) -name "*.tar.gz" | parallel --bar --workdir CRAN/extracted tar xfz
+endef
 
-package-coverage: $(PACKAGE_COVERAGE_CSV) $(PACKAGE_COVERAGE_STATS)
-package-metadata: $(PACKAGE_METADATA_FILES) $(PACKAGE_METADATA_STATS)
-package-code-signatr: $(PACKAGE_CODE_SIGNATR_CSV) $(PACKAGE_CODE_SIGNATR_STATS)
-signatr-gbov: $(SIGNATR_GBOV_RUN_CSV) $(SIGNATR_GBOV_STATS)
+define CHECK_REPO
+	@if [ ! -d "$(notdir $(1))" ]; then echo "Missing $(1) repository, please run: git clone https://github.com/$(1)"; exit 1; fi
+endef
 
-on-each-package:
-	@[ "$(TASK)" ] || ( echo "*** Undefined TASK"; exit 1 )
-	@[ -x "$(TASK)" ] || ( echo "*** $(TASK): no such file"; exit 1 )
-	@[ "$(OUTPUT_DIR)" ] || ( echo "*** Undefined OUTPUT_DIR"; exit 1 )
-	-if [ -n "$(START_XVFB)" ]; then  \
-     nohup Xvfb :6 -screen 0 1280x1024x24 >/dev/null 2>&1 & \
-     export DISPLAY=:6; \
-  fi; \
-  export R_TESTS=""; \
-  export R_BROWSER="false"; \
-  export R_PDFVIEWER="false"; \
-  export R_BATCH=1; \
-  export NOT_CRAN="true"; \
-  echo "*** DISPLAY=$$DISPLAY"; \
-  echo "*** PATH=$$PATH"; \
-  echo "*** R_LIBS=$$R_LIBS"; \
-  mkdir -p "$(OUTPUT_DIR)"; \
-  export PATH=$$R_DIR/bin:$$PATH; \
-  parallel \
-    -a $(PACKAGES_FILE) \
-    --bar \
-    --env PATH \
-    --jobs $(JOBS) \
-    --results "$(OUTPUT_DIR)/parallel.csv" \
-    --tagstring "$(notdir $(TASK)) - {/}" \
-    --timeout $(TIMEOUT) \
-    --workdir "$(OUTPUT_DIR)/{/}/" \
-    $(RUNR_DIR)/inst/run-task.sh \
-      $(TASK) "$(PACKAGES_SRC_DIR)/{1/}" $(ARGS)
+define INFO
+  @echo "$(1)=$($(1))"
+endef
+
+########################################################################
+# TARGETS                                                              #
+########################################################################
+
+$(EXTRACTED_CODE_STATS): $(PACKAGES)
+	$(call LOG,EXTRACTING CODE)
+	-$(MAP) -t $(TIMEOUT) --override -f $< -o $(@D) -e $(RUNR_TASKS_DIR)/package-runnable-code.R \
+    -- $(CRAN_DIR)/extracted/{1}
+
+$(EXTRACTED_CODE_CSV): $(EXTRACTED_CODE_STATS)
+	$(call LOG,MERGING $(@F))
+	$(MERGE) --in $(@D) --csv-cols "ccciii" --key "package" --key-use-dirname $(@F)
+
+$(WRAPPED_CODE_STATS): $(PACKAGES)
+	$(call LOG,WRAPPING CODE)
+	-$(MAP) -t $(TIMEOUT) --override -f $< -o $(@D) -e $(RUNR_TASKS_DIR)/package-runnable-code.R \
+    -- $(CRAN_DIR)/extracted/{1} --wrap $(WRAP_TEMPLATE_FILE)
+
+$(WRAPPED_CODE_CSV): $(WRAPPED_CODE_STATS)
+	$(call LOG,MERGING $(@F))
+	$(MERGE) --in $(@D) --csv-cols "ccciii" --key "package" --key-use-dirname $(@F)
+
+.PRECIOUS: $(RUN_CODE_STATS)
+$(RUN_CODE_STATS): $(EXTRACTED_CODE_CSV)
+	$(call LOG,RUNNING)
+	-$(CAT) -d '/' -c package,file --no-header $< | \
+    $(MAP) -f - -o $(@D) -e $(SCRIPTS_DIR)/run-r-file.sh --no-exec-wrapper \
+    -- -t $(TIMEOUT) $(EXTRACTED_CODE_DIR)/{1}
+
+.PRECIOUS: $(TRACE_STATS)
+$(TRACE_STATS): $(WRAPPED_CODE_CSV)
+	$(call LOG,TRACING)
+	-$(CAT) -d '/' -c package,file --no-header $< | \
+    $(MAP) -f - -o $(@D) -e $(SCRIPTS_DIR)/run-r-file.sh --no-exec-wrapper \
+    -- -t $(TIMEOUT) $(WRAPPED_CODE_DIR)/{1}
+
+.PHONY: extract-code
+extract-code:
+	$(ROLLBACK) $(EXTRACTED_CODE_DIR)
+	@$(MAKE) $(EXTRACTED_CODE_CSV) $(EXTRACTED_CODE_STATS)
+
+.PHONY: wrap-code
+wrap-code:
+	$(ROLLBACK) $(WRAPPED_CODE_DIR)
+	@$(MAKE) $(WRAPPED_CODE_CSV) $(WRAPPED_CODE_STATS)
+
+.PHONY: run
+run:
+	$(ROLLBACK) $(RUN_CODE_DIR)
+	@$(MAKE) $(RUN_CODE_STATS)
+
+.PHONY: trace
+trace:
+	$(ROLLBACK) $(TRACE_DIR)
+	@$(MAKE) $(TRACE_STATS)
+
+.PHONY: install-packages
+install-packages:
+	$(call PKG_INSTALL_FROM_FILE,$(PACKAGES))
+
+########################################################################
+# SIGNATR dependencies                                                 #
+########################################################################
+
+.PHONY: libs-dependencies
+libs-dependencies:
+	$(call LOG,Installing lib dependencies: $@)
+	[ -d $(LIBRARY_DIR) ]  || mkdir -p $(LIBRARY_DIR)
+	[ -d $(CRAN_ZIP_DIR) ] || mkdir -p $(CRAN_ZIP_DIR)
+	[ -d $(CRAN_SRC_DIR) ] || mkdir -p $(CRAN_SRC_DIR)
+	$(call PKG_INSTALL_FROM_FILE,dependencies.txt)
+
+.PHONY: argtracer
+argtracer:
+	$(call LOG,Installing library: $@)
+	$(call CHECK_REPO,hyeyoungshin/argtracer)
+	cd $@ && \
+    rm -rf src/*.o src/*.so && \
+    R CMD INSTALL .
+
+.PHONY: instrumentr
+instrumentr:
+	$(call LOG,Installing library: $@)
+	$(call CHECK_REPO,PRL-PRG/instrumentr)
+	cd $@ && \
+    make clean install
+
+
+.PHONY: record
+record:
+	$(call LOG,Installing library: $@)
+	$(call CHECK_REPO,yth/record-dev)
+	cd record-dev/record && \
+    rm -rf src/*.o src/*.so && \
+    R CMD INSTALL .
+
+.PHONY: runr
+runr:
+	$(call LOG,Installing library: $@)
+	$(call CHECK_REPO,PRL-PRG/runr)
+	cd $@ && \
+		make clean install
+
+.PHONY: libs
+libs: libs-dependencies record instrumentr argtracer runr
+
+.PHONY: envir
+envir:
+	$(call INFO,CRAN_LOCAL_MIRROR)
+	$(call INFO,CRAN_DIR)
+	$(call INFO,CURDIR)
+	$(call INFO,LIBRARY_DIR)
+	$(call INFO,R_BIN)
+	$(call INFO,RUN_DIR)
+	$(call INFO,JOBS)
+	$(call INFO,TIMEOUT)
+
+########################################################################
+# DOCKER                                                               #
+########################################################################
+
+DOCKER_SHELL_CONTAINER_NAME := $$USER-signatr-shell
+DOCKER_IMAGE_NAME := prlprg/project-signatr
+
+SHELL_CMD ?= bash
+
+.PHONY: shell
+shell:
+	docker run \
+    --rm \
+    --name $(DOCKER_SHELL_CONTAINER_NAME)-$$(openssl rand -hex 2) \
+    --privileged \
+    -ti \
+    -v "$(CURDIR):$(CURDIR)" \
+    -v $$(readlink -f $(CRAN_DIR)):$(CRAN_DIR) \
+    -v $$(readlink -f $(LIBRARY_DIR)):$(LIBRARY_DIR) \
+    -e USER_ID=$$(id -u) \
+    -e GROUP_ID=$$(id -g) \
+    -e R_LIBS=$(LIBRARY_DIR) \
+    -e TZ=Europe/Prague \
+    -w $(CURDIR) \
+    $(DOCKER_IMAGE_NAME) \
+    $(SHELL_CMD)
+
+.PHONY: rstudio
+rstudio:
+	if [ -z "$$PORT" ]; then echo "Missing PORT"; exit 1; fi
+	docker run \
+    --rm \
+    --name "$$USER-signatr-rstudio-$$PORT" \
+    -d \
+    -p "$$PORT:8787" \
+    -v "$(CURDIR):$(CURDIR)" \
+    -e USERID=$$(id -u) \
+    -e GROUPID=$$(id -g) \
+    -e ROOT=true \
+    -e DISABLE_AUTH=true \
+    $(DOCKER_RSTUDIO_IMAGE_NAME)
+
+.PHONY: docker-image
+docker-image:
+	$(MAKE) -C docker-image
+
+.PHONY: httpd
+httpd:
+	docker run \
+    --rm \
+    -d \
+    --name signatr-httpd \
+    -p 80:80 \
+    -v $(PROJECT_BASE_DIR):/usr/local/apache2/htdocs$(PROJECT_BASE_DIR) \
+    httpd:2.4

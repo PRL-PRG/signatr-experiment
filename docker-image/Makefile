@@ -1,13 +1,17 @@
-IMAGE_NAME := prlprg/project-signatr
-.PHONY: image upload
+BASE_DIR:=$(dir $(realpath $(firstword $(MAKEFILE_LIST))))
 
+include $(BASE_DIR)/../Makevars
+
+.PHONY: all
 all: image
 
+.PHONY: image
 image:
 	docker build \
     --rm \
-    -t $(IMAGE_NAME) \
+    -t $(DOCKER_IMAGE_NAME) \
     .
 
+.PHONY: upload
 upload: image
-	docker push $(IMAGE_NAME)
+	docker push $(DOCKER_IMAGE_NAME)

@@ -48,13 +48,6 @@ docs/
 # translation temp files
 po/*~
 
-# CRAN and library
-CRAN/
-library/
-instrumentr/
-injectr/
-runr/
-docker-image/
 
 ################################################################################
 ## C++ gitignore
@@ -97,11 +90,12 @@ docker-image/
 ################################################################################
 ## Custom gitignore
 ################################################################################
-/run/
-/injectr/
+/CRAN/
+/argtracer/
 /instrumentr/
 /library/
-/packages-1.txt
+/packages.txt
+/record-dev/
+/run/
 /runr/
 /signatr/
-packages-*.txt

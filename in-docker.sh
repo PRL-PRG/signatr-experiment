@@ -1,21 +1,8 @@
-#!/bin/bash -x
+#!/bin/bash
 
-DOCKER_IMAGE_NAME="prlprg/project-signatr"
+if [ $# -eq 0 ]; then
+    echo "Usage: $0 args"
+    exit 1
+fi
 
-R_PROJECT_BASE_DIR="$PWD"
-CRAN_DIR="$R_PROJECT_BASE_DIR/CRAN"
-LIBRARY_DIR="$R_PROJECT_BASE_DIR/library/4.0"
-
-cmd="bash"
-[ $# -gt 0 ] && cmd="$@"
-
-docker run \
-    -ti \
-    --rm \
-    -v "$PWD:$PWD" \
-    -e R_LIBS="$PWD/library" \
-    -e USER_ID=$(id -u) \
-    -e USER_GID=$(id -g) \
-    -w "$PWD" \
-    "$DOCKER_IMAGE_NAME" \
-    $cmd
+exec make shell SHELL_CMD="$*"
