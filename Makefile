@@ -132,6 +132,11 @@ extract-code:
 	$(ROLLBACK) $(EXTRACTED_CODE_DIR)
 	@$(MAKE) $(EXTRACTED_CODE_CSV) $(EXTRACTED_CODE_STATS)
 
+.PHONY: run-code
+run-code:
+	$(ROLLBACK) $(RUN_CODE_DIR)
+	@$(MAKE) $(RUN_CODE_STATS)
+
 .PHONY: wrap-code
 wrap-code:
 	$(ROLLBACK) $(WRAPPED_CODE_DIR)
