@@ -57,14 +57,11 @@ we might want to have some local changes to them.
 ```sh
 $ git clone ssh://git@github.com/yth/record-dev
 $ git clone ssh://git@github.com/PRL-PRG/argtracer
-$ git clone ssh://git@github.com/PRL-PRG/instrumentr
+$ git clone ssh://git@github.com/PRL-PRG/instrumentr -b c-api
 $ git clone ssh://git@github.com/PRL-PRG/runr
 $ git clone ssh://git@github.com/PRL-PRG/signatr
 ```
 
-Check out the c-api branch of instrumentr.
-
-Create a `library` folder so that it's own by you.
 
 ``` sh
 [docker]$ make libs
