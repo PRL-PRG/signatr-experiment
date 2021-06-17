@@ -62,6 +62,7 @@ $ git clone ssh://git@github.com/PRL-PRG/runr
 $ git clone ssh://git@github.com/PRL-PRG/signatr
 ```
 
+Check out the c-api branch of instrumentr.
 
 Install the dependencies, using the docker image!
 
