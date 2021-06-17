@@ -60,6 +60,7 @@ $ git clone ssh://git@github.com/hyeyoungshin/argtracer
 $ git clone ssh://git@github.com/PRL-PRG/instrumentr
 $ git clone ssh://git@github.com/PRL-PRG/runr
 $ git clone ssh://git@github.com/PRL-PRG/signatr
+$ git clone ssh://git@github.com:yth/record-dev.git
 ```
 
 
