@@ -56,7 +56,7 @@ we might want to have some local changes to them.
 
 ```sh
 $ git clone ssh://git@github.com/yth/record-dev
-$ git clone ssh://git@github.com/hyeyoungshin/argtracer
+$ git clone ssh://git@github.com/PRL-PRG/argtracer
 $ git clone ssh://git@github.com/PRL-PRG/instrumentr
 $ git clone ssh://git@github.com/PRL-PRG/runr
 $ git clone ssh://git@github.com/PRL-PRG/signatr
