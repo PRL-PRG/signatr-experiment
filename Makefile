@@ -89,6 +89,10 @@ define CHECK_REPO
 	@if [ ! -d "$(notdir $(1))" ]; then echo "Missing $(1) repository, please run: git clone https://github.com/$(1)"; exit 1; fi
 endef
 
+define CLONE_REPO
+	[ -d "$(notdir $(1))" ] || git clone https://github.com/$(1)
+endef
+
 define INFO
   @echo "$(1)=$($(1))"
 endef
@@ -220,6 +224,13 @@ envir:
 	$(call INFO,RUN_DIR)
 	$(call INFO,JOBS)
 	$(call INFO,TIMEOUT)
+
+.PHONY: clone
+clone:
+	$(call CLONE_REPO,hyeyoungshin/argtracer)
+	$(call CLONE_REPO,PRL-PRG/instrumentr)
+	$(call CLONE_REPO,yth/record-dev)
+	$(call CLONE_REPO,PRL-PRG/runr)
 
 ########################################################################
 # DOCKER                                                               #
