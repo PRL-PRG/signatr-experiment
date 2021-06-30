@@ -5,4 +5,7 @@ if [ $# -eq 0 ]; then
     exit 1
 fi
 
-exec make shell SHELL_CMD="$*"
+BASE_DIR=$(dirname "$0")
+R_LIBS=$(readlink -e $BASE_DIR/library)
+
+exec make shell R_LIBS="$R_LIBS" SHELL_CMD="$*"
