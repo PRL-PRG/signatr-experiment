@@ -183,7 +183,7 @@ libs-dependencies: $(LIBRARY_DIR) $(CRAN_ZIP_DIR) $(CRAN_SRC_DIR)
 .PHONY: argtracer
 argtracer:
 	$(call LOG,Installing library: $@)
-	$(call CHECK_REPO,hyeyoungshin/argtracer)
+	$(call CHECK_REPO,PRL-PRG/argtracer)
 	cd $@ && \
     rm -rf src/*.o src/*.so && \
     R CMD INSTALL .
