@@ -10,7 +10,8 @@ RUN DEBIAN_FRONTEND=noninteractive \
       libfribidi-dev \
       openssh-server \
       python3-pip \
-      rr
+      rr \
+	  flex
 
 RUN sed -i -e 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen && \
     dpkg-reconfigure --frontend=noninteractive locales && \
@@ -31,6 +32,35 @@ RUN mkdir parallel && \
 RUN wget -O /tmp/fd.deb https://github.com/sharkdp/fd/releases/download/v8.2.1/fd_8.2.1_amd64.deb && \
   dpkg -i /tmp/fd.deb && \
   rm -f /tmp/fd.deb
+
+# install m4
+RUN mkdir m4 && \
+    cd m4 && \
+    curl https://ftp.gnu.org/gnu/m4/m4-latest.tar.bz2 | tar -xjf- --strip 1 && \
+    ./configure && \
+    make install
+
+# install bison
+RUN mkdir bison && \
+    cd bison && \
+    curl https://ftp.gnu.org/gnu/bison/bison-3.5.tar.gz | tar -xzf- --strip 1 && \
+    ./configure && \
+    make install
+
+# install roxygen2 for contractr
+RUN Rscript -e "install.packages(\"roxygen2\", repos=\"http://cran.us.r-project.org\")"
+
+# install tastr for contractr
+RUN git clone https://github.com/PRL-PRG/tastr --branch typer-oopsla20 && \
+    make -C tastr CXX=g++
+
+# install injectr for contractr
+RUN git clone https://github.com/PRL-PRG/injectr --branch typer-oopsla20 && \
+    R CMD INSTALL injectr
+
+# install contractr
+RUN git clone https://github.com/PRL-PRG/contractr --branch typer-oopsla20 && \
+    R CMD INSTALL contractr
 
 ENV R_PROJECT_BASE_DIR="/R" \
     TERM=xterm
