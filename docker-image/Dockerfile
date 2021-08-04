@@ -49,6 +49,7 @@ RUN mkdir bison && \
 
 # install roxygen2 for contractr
 RUN Rscript -e "install.packages(\"roxygen2\", repos=\"http://cran.us.r-project.org\")"
+RUN Rscript -e "install.packages(\"gtools\", repos=\"http://cran.us.r-project.org\")"
 
 # install tastr for contractr
 RUN git clone https://github.com/PRL-PRG/tastr --branch typer-oopsla20 && \
