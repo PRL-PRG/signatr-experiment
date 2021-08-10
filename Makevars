@@ -1,1 +1,8 @@
+# -*- mode: makefile -*-
+PROJECT_BASE_DIR := $(CURDIR)
+LIBRARY_DIR      := $(R_LIBS)
+CRAN_DIR         ?= $(PROJECT_BASE_DIR)/CRAN
+R_DIR            ?= $(PROJECT_BASE_DIR)/R-dyntrace
+CRAN_MIRROR      ?= https://cloud.r-project.org
+
 DOCKER_IMAGE_NAME := prlprg/project-signatr

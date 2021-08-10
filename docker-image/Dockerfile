@@ -8,10 +8,8 @@ RUN DEBIAN_FRONTEND=noninteractive \
       locales \
       libharfbuzz-dev \
       libfribidi-dev \
-      openssh-server \
-      python3-pip \
       rr \
-	  flex
+  	  flex
 
 RUN sed -i -e 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen && \
     dpkg-reconfigure --frontend=noninteractive locales && \

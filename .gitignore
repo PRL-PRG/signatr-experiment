@@ -94,8 +94,10 @@ po/*~
 /argtracer/
 /instrumentr/
 /library/
+/library-local/
 /packages.txt
 /record-dev/
+/R-dyntrace
 /run/
 /runr/
 /signatr/

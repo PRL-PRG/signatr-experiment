@@ -2,18 +2,20 @@
 MAKEFLAGS += --no-builtin-rules
 .SUFFIXES:
 
-R_DIR             := /R/R-dyntrace
-R_BIN             := $(R_DIR)/bin/R
+ifndef R_LIBS
+$(error R_LIBS is not set)
+endif
 
-PROJECT_BASE_DIR  := $(CURDIR)
-LIBRARY_DIR       := $(PROJECT_BASE_DIR)/library
-CRAN_DIR          := $(PROJECT_BASE_DIR)/CRAN
-CRAN_MIRROR       := https://cloud.r-project.org
+# TODO: add support for blacklisting packages (e.g. H2O)
+
+include Makevars
+
+R_BIN             := $(R_DIR)/bin/R
 CRAN_LOCAL_MIRROR := file://$(CRAN_DIR)
 CRAN_SRC_DIR      := $(CRAN_DIR)/extracted
 CRAN_ZIP_DIR      := $(CRAN_DIR)/src/contrib
-SCRIPTS_DIR       := $(CURDIR)/scripts
-RUNR_DIR          := $(CURDIR)/runr
+SCRIPTS_DIR       := $(PROJECT_BASE_DIR)/scripts
+RUNR_DIR          := $(PROJECT_BASE_DIR)/runr
 RUNR_TASKS_DIR    := $(RUNR_DIR)/inst/tasks
 
 # this is where the results shoud go to
@@ -85,6 +87,10 @@ endef
 
 define CHECK_REPO
 	@if [ ! -d "$(notdir $(1))" ]; then echo "Missing $(1) repository, please run: git clone https://github.com/$(1)"; exit 1; fi
+endef
+
+define CLONE_REPO
+	[ -d "$(notdir $(1))" ] || git clone https://github.com/$(1)
 endef
 
 define INFO
@@ -160,12 +166,18 @@ install-packages:
 # SIGNATR dependencies                                                 #
 ########################################################################
 
+$(LIBRARY_DIR):
+	mkdir -p $@
+
+$(CRAN_ZIP_DIR):
+	mkdir -p $@
+
+$(CRAN_SRC_DIR):
+	mkdir -p $@
+
 .PHONY: libs-dependencies
-libs-dependencies:
+libs-dependencies: $(LIBRARY_DIR) $(CRAN_ZIP_DIR) $(CRAN_SRC_DIR)
 	$(call LOG,Installing lib dependencies: $@)
-	[ -d $(LIBRARY_DIR) ]  || mkdir -p $(LIBRARY_DIR)
-	[ -d $(CRAN_ZIP_DIR) ] || mkdir -p $(CRAN_ZIP_DIR)
-	[ -d $(CRAN_SRC_DIR) ] || mkdir -p $(CRAN_SRC_DIR)
 	$(call PKG_INSTALL_FROM_FILE,dependencies.txt)
 
 .PHONY: argtracer
@@ -213,6 +225,13 @@ envir:
 	$(call INFO,JOBS)
 	$(call INFO,TIMEOUT)
 
+.PHONY: clone
+clone:
+	$(call CLONE_REPO,hyeyoungshin/argtracer)
+	$(call CLONE_REPO,PRL-PRG/instrumentr)
+	$(call CLONE_REPO,yth/record-dev)
+	$(call CLONE_REPO,PRL-PRG/runr)
+
 ########################################################################
 # DOCKER                                                               #
 ########################################################################
@@ -223,7 +242,7 @@ DOCKER_IMAGE_NAME := prlprg/project-signatr
 SHELL_CMD ?= bash
 
 .PHONY: shell
-shell:
+shell: $(LIBRARY_DIR) $(CRAN_ZIP_DIR) $(CRAN_SRC_DIR)
 	docker run \
     --rm \
     --name $(DOCKER_SHELL_CONTAINER_NAME)-$$(openssl rand -hex 2) \
