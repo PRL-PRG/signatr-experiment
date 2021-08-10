@@ -64,13 +64,13 @@ $ git clone ssh://git@github.com/PRL-PRG/signatr
 
 Check out the c-api branch of instrumentr.
 
-Install the dependencies, using the docker image!
+Create a `library` folder so that it's own by you.
 
 ``` sh
 [docker]$ make libs
 ```
 
-This should create a `library` directory with all the above libraries as well as with all their dependencies.
+This should populate `library` directory with all the above libraries as well as with all their dependencies.
 
 **Important: double check that you see your username!**
 
