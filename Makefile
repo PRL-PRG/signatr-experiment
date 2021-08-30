@@ -2,10 +2,6 @@
 MAKEFLAGS += --no-builtin-rules
 .SUFFIXES:
 
-ifndef R_LIBS
-$(error R_LIBS is not set)
-endif
-
 # TODO: add support for blacklisting packages (e.g. H2O)
 
 include Makevars
