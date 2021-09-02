@@ -1,4 +1,5 @@
-record::open_db(file.path(Sys.getenv("RUNR_CWD"), "db"), create=TRUE)
+db_path <- file.path(Sys.getenv("RUNR_CWD"), "db")
+record::open_db(db_path, create= if(!dir.exists(db_path)) TRUE)
 
 argtracer::trace_args(code={
   .BODY.
