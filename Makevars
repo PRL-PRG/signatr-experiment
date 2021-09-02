@@ -6,3 +6,4 @@ R_DIR            ?= $(PROJECT_BASE_DIR)/R-dyntrace
 CRAN_MIRROR      ?= https://cloud.r-project.org
 
 DOCKER_IMAGE_NAME := prlprg/project-signatr
+DOCKER_RSTUDIO_IMAGE_NAME    := fikovnik/rstudio:4.0.2
