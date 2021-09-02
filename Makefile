@@ -90,7 +90,8 @@ define CHECK_REPO
 endef
 
 define CLONE_REPO
-	[ -d "$(notdir $(1))" ] || git clone https://github.com/$(1)
+  if [ -d "$(notdir $(1))" ]; then git -C $(notdir $(1)) pull; else git clone https://github.com/$(1); fi
+
 endef
 
 define INFO
