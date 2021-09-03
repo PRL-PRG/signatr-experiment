@@ -13,7 +13,7 @@ read_file <- function(file) {
   )
 }
 
-run <- function(columns, delim, header, file, limit, shuffle) {
+run <- function(columns, delim, header, file, limit, shuffle, package_subset) {
   df <- read_file(file)
   df_cols <- colnames(df)
 
@@ -42,6 +42,15 @@ run <- function(columns, delim, header, file, limit, shuffle) {
     max_rows <- min(max_rows, limit)
     rows <- head(rows, max_rows)
     df <- df[rows, , drop=FALSE]
+  }
+
+  if (!is.null(package_subset)) {
+    if (!("package" %in% colnames(df))) {
+      stop("The data frame is missing package column")
+    }
+
+    packages <- readLines(package_subset)
+    df <- subset(df, package %in% packages)
   }
 
   if (header) {
@@ -79,6 +88,12 @@ option_list <- list(
     action="store_true", default=FALSE,
     help="Shuffle the output rows",
     dest="shuffle"
+  ),
+  make_option(
+    c("--package-subset"),
+    dest="package_subset",
+    metavar="FILE",
+    help="Only include packages listed in the FILE"
   )
 )
 

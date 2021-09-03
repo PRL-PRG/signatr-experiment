@@ -119,14 +119,14 @@ $(WRAPPED_CODE_CSV): $(WRAPPED_CODE_STATS)
 .PRECIOUS: $(RUN_CODE_STATS)
 $(RUN_CODE_STATS): $(EXTRACTED_CODE_CSV)
 	$(call LOG,RUNNING)
-	-$(CAT) -d '/' -c package,file --no-header $< | \
+	-$(CAT) -d '/' -c package,file --no-header --package-subset $(PACKAGES) $< | \
     $(MAP) -f - -o $(@D) -e $(SCRIPTS_DIR)/run-r-file.sh --no-exec-wrapper \
     -- -t $(TIMEOUT) $(EXTRACTED_CODE_DIR)/{1}
 
 .PRECIOUS: $(TRACE_STATS)
 $(TRACE_STATS): $(WRAPPED_CODE_CSV)
 	$(call LOG,TRACING)
-	-$(CAT) -d '/' -c package,file --no-header $< | \
+	-$(CAT) -d '/' -c package,file --no-header --package-subset $(PACKAGES) $< | \
     $(MAP) -f - -o $(@D) -e $(SCRIPTS_DIR)/run-r-file.sh --no-exec-wrapper \
     -- -t $(TIMEOUT) $(WRAPPED_CODE_DIR)/{1}
 
