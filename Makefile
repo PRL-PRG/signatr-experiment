@@ -208,8 +208,15 @@ runr:
 	cd $@ && \
 		make clean install
 
+.PHONY: signatr
+signatr:
+	$(call LOG,Installing library: $@)
+	$(call CHECK_REPO,PRL-PRG/signatr)
+	cd $@ && \
+		make clean install
+
 .PHONY: libs
-libs: libs-dependencies record instrumentr argtracer runr
+libs: libs-dependencies record instrumentr argtracer runr signatr
 
 .PHONY: envir
 envir:
@@ -228,6 +235,7 @@ clone:
 	$(call CLONE_REPO,PRL-PRG/instrumentr)
 	$(call CLONE_REPO,yth/record-dev)
 	$(call CLONE_REPO,PRL-PRG/runr)
+	$(call CLONE_REPO,PRL-PRG/signatr)
 
 ########################################################################
 # DOCKER                                                               #
