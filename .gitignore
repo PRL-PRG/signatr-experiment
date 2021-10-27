@@ -101,3 +101,6 @@ po/*~
 /run/
 /runr/
 /signatr/
+/sxpdb/
+/_targets/
+data/extracted-code/
