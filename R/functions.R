@@ -115,14 +115,15 @@ trace_file <- function(file_path, lib_path, output_path) {
     show = TRUE,
     env = r_envir
   )
-  file.path(output_path, basename(file_path))
+  file.path(normalizePath(output_path, mustWork = TRUE), basename(file_path))
 }
 
 merge_db <- function(db_paths, output_path) {
-  db_path = file.path(output_path, "cran_db")
+  db_path = file.path(normalizePath(output_path, mustWork = TRUE), "cran_db")
   sxpdb::open_db(db_path, create = !file.exists(file.path(db_path, "stats.bin")))
-  for(db_path in db_paths) {
-    sxpdb::merge_db(db_path)
+  for(path in db_paths) {
+    sxpdb::merge_db(path)
+    cat("Added ", sxpdb::count_vals(), " values from ", path, "\n")
   }
   sxpdb::close_db()
   db_path
