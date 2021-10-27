@@ -55,7 +55,7 @@ Get the dependencies. The reason why we do not put them yet in the image is that
 we might want to have some local changes to them.
 
 ```sh
-$ git clone ssh://git@github.com/yth/record-dev
+$ git clone ssh://git@github.com/PRL-PRG/sxpdb
 $ git clone ssh://git@github.com/PRL-PRG/argtracer
 $ git clone ssh://git@github.com/PRL-PRG/instrumentr -b c-api
 $ git clone ssh://git@github.com/PRL-PRG/runr

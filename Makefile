@@ -27,9 +27,9 @@ JOBS          ?= $(shell sysctl -n hw.ncpu 2>/dev/null || nproc -a 2>/dev/null |
 TIMEOUT       ?= 35m
 
 # tools
-MAP				:= $(RUNR_DIR)/inst/map.sh -j $(JOBS) $(MAP_EXTRA)
-R					:= R_LIBS=$(LIBRARY_DIR) $(R_DIR)/bin/R
-RSCRIPT		:= R_LIBS=$(LIBRARY_DIR) $(R_DIR)/bin/Rscript
+MAP       := $(RUNR_DIR)/inst/map.sh -j $(JOBS) $(MAP_EXTRA)
+R         := R_LIBS=$(LIBRARY_DIR) $(R_DIR)/bin/R
+RSCRIPT   := R_LIBS=$(LIBRARY_DIR) $(R_DIR)/bin/Rscript
 MERGE     := $(RSCRIPT) $(RUNR_DIR)/inst/merge-files.R
 ROLLBACK  := $(SCRIPTS_DIR)/rollback.sh
 CAT       := $(SCRIPTS_DIR)/cat.R
@@ -82,7 +82,7 @@ define PKG_INSTALL_FROM_FILE
 endef
 
 define CHECK_REPO
-	@if [ ! -d "$(notdir $(1))" ]; then echo "Missing $(1) repository, please run: git clone https://github.com/$(1)"; exit 1; fi
+	@if [ ! -d "$(notdir $(1))" ]; then echo "Missing $(1) repository, please run: git clone ssh://git@github.com/$(1)"; exit 1; fi
 endef
 
 define CLONE_REPO
@@ -189,17 +189,14 @@ argtracer:
 instrumentr:
 	$(call LOG,Installing library: $@)
 	$(call CHECK_REPO,PRL-PRG/instrumentr)
-	cd $@ && \
-    make clean install
+	cd $@ && make clean install
 
 
-.PHONY: record
-record:
+.PHONY: sxpdb
+sxpdb:
 	$(call LOG,Installing library: $@)
-	$(call CHECK_REPO,yth/record-dev)
-	cd record-dev/record && \
-    rm -rf src/*.o src/*.so && \
-    R CMD INSTALL .
+	$(call CHECK_REPO,PRL-PRG/sxpdb)
+	cd $@ && make clean install
 
 .PHONY: runr
 runr:
@@ -216,7 +213,7 @@ signatr:
 		make clean install
 
 .PHONY: libs
-libs: libs-dependencies record instrumentr argtracer runr signatr
+libs: libs-dependencies sxpdb instrumentr argtracer runr signatr
 
 .PHONY: envir
 envir:
@@ -233,7 +230,7 @@ envir:
 clone:
 	$(call CLONE_REPO,PRL-PRG/argtracer)
 	$(call CLONE_REPO,PRL-PRG/instrumentr)
-	$(call CLONE_REPO,yth/record-dev)
+	$(call CLONE_REPO,yth/sxpdb-dev)
 	$(call CLONE_REPO,PRL-PRG/runr)
 	$(call CLONE_REPO,PRL-PRG/signatr)
 
