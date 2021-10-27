@@ -119,11 +119,11 @@ trace_file <- function(file_path, lib_path, output_path) {
 }
 
 merge_db <- function(db_paths, output_path) {
-  db_name = "cran_db"
-  sxpdb::create_db(db_name)
+  db_path = file.path(output_path, "cran_db")
+  sxpdb::open_db(db_path, create = !file.exists(file.path(db_path, "stats.bin")))
   for(db_path in db_paths) {
     sxpdb::merge_db(db_path)
   }
   sxpdb::close_db()
-  file.path(output_path, db_name)
+  db_path
 }
