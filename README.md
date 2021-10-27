@@ -3,6 +3,8 @@
 This is a skeleton project for running signatr experiments.
 The idea is to have an isolated environment in which one can run the fuzzer.
 
+There is also a new pipeline using the `targets` package, see below for more explanations.
+
 ## Installation
 
 ### Experimental setup
@@ -151,4 +153,28 @@ The result will be in `run/wrapped-code` and it is similar to extracted code.
 The results should be in `run/trace`.
 Concretely, in `run/trace/parallel.csv` like in run code task.
 The actual `db` will be in `run/trace/<package>/<type>/<file>/db`
+
+# `targets` pipeline
+
+For a local run, install `R-dyntrace`, then set up the right environment:
+
+```sh 
+source ./environment.sh
+```
+
+- install the dependencies (a combination of `git clone` and `make instrumentr`, `make ...`).
+- install the `targets`, `future`, `future.callr` packages
+- run the pipeline:
+
+```R
+targets::tar_make()
+```
+
+For using more cores (like, 10), do:
+
+```R
+tar_make_future(workers = 10)
+```
+
+The resulting database will be in `data/extracted-code/cran_db`.
 
