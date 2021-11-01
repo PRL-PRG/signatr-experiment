@@ -177,10 +177,10 @@ For using more cores (like, 10), do:
 tar_make_future(workers = 10)
 ```
 
-The resulting merged database will be in `data/sxpdb-code/cran_db`.
+The resulting merged database will be in `data/sxpdb/cran_db`.
 
 Other by-products of the pipeline:
 
 - `data/extracted-code` contains the extracted files (from tests, examples and vignettes) to be run to generate the values
-- `data/sxpdb` contains also the individual databases, one for each source file tha twas run
+- `data/sxpdb` contains also the individual databases, one for each source file that was run
 
