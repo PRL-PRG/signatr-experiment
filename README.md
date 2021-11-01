@@ -66,6 +66,7 @@ $ git clone ssh://git@github.com/PRL-PRG/signatr
 
 
 ``` sh
+$mkdir library
 [docker]$ make libs
 ```
 
