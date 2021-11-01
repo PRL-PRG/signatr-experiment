@@ -91,8 +91,8 @@ extract_code_from_package <-
     # to be able to feed the concatenation for the examples
     runr::extract_package_code(package,
                                pkg_dir = file.path(lib_path, package),
-                               output_dir = output_path) %>%
-      mutate(file = file.path(normalizePath(output_path, mustWork = TRUE), file)) %>%
+                               output_dir = file.path(output_path, package)) %>%
+      mutate(file = file.path(normalizePath(output_path, mustWork = TRUE), package, file)) %>%
       pull(file)
   }
 
@@ -118,12 +118,55 @@ trace_file <- function(file_path, lib_path, output_path) {
   file.path(normalizePath(output_path, mustWork = TRUE), basename(file_path))
 }
 
+run_file <- function(file_path, lib_path, r_home = "R-dyntrace") {
+  # Put the right arch, the right libPaths and so on
+  res <- callr::rcmd(
+    "BATCH",
+    c("--no-timing", basename(file_path)),
+    libpath = lib_path,
+    #arch = file.path(r_home, "bin", "R"),
+    show = TRUE,
+    wd = dirname(file_path),
+    env = r_envir
+  )
+  tibble(
+    file_path,
+    status = res$status
+  )
+}
+
+run_file2 <- function(file_path, lib_path,r_home = "R-dyntrace") {
+  r_bin <- normalizePath(file.path(r_home, "bin", "R"), mustWork = TRUE)
+  # Put the right arch, the right libPaths and so on
+  status <- tryCatch({
+    callr::r(
+      function(x) {
+        code <- parse(file = x)
+        code <- as.call(c(`{`, code))
+        eval(code)
+      },
+      list(file_path),
+      libpath = lib_path,
+      arch = r_bin,
+      show = TRUE,
+      #env = r_envir,
+      wd = dirname(file_path)
+    )
+    NA_character_},
+    error = function(e) e$message)
+  tibble(
+    file_path,
+    message = status,
+    status = !is.na(status)
+  )
+}
+
 merge_db <- function(db_paths, output_path) {
   db_path = file.path(normalizePath(output_path, mustWork = TRUE), "cran_db")
   sxpdb::open_db(db_path, create = !file.exists(file.path(db_path, "stats.bin")))
   for(path in db_paths) {
     sxpdb::merge_db(path)
-    cat("Added ", sxpdb::count_vals(), " values from ", path, "\n")
+    cat("The size of the DB is now ", sxpdb::size_db(), ", with adding values from ", path, "\n")
   }
   sxpdb::close_db()
   db_path
