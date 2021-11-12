@@ -64,7 +64,6 @@ list(
     pattern = map(packages_to_run)
   ),
 
-  # We need to flatten all the files (from one vector of vectors, one per package, to only one vector)
   tar_target(
     individual_files,
     extracted_files,
@@ -78,13 +77,13 @@ list(
     # or use a time cue instead of using a hash one?
     pattern = map(individual_files)
   ),
-  
+
   tar_target(
     run_results,
     run_file(individual_files, lib_path),
     pattern = map(individual_files)
   ),
-  
+
   tar_target(
     run_results2,
     run_file2(individual_files, lib_path, r_home = "R-4.0.2"),
