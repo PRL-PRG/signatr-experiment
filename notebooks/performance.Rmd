@@ -1,0 +1,26 @@
+---
+title: "Performance analysis of the pipeline for the spxdb database"
+output: html_notebook
+---
+
+
+```{r setup}
+library(targets)
+library(dplyr)
+library(ggplot2)
+
+knitr::opts_knit$set(root.dir = normalizePath("..")) 
+```
+
+# Performance of tracing 
+
+```{r durations}
+traced_durations <- tar_meta(fields = "seconds", complete_only = TRUE, names = starts_with("traced_results"))
+normal_durations <- tar_meta(fields = "seconds", complete_only = TRUE, names = starts_with("run_results2"))
+```
+
+```{r slowdown}
+slowdown <- traced_durations$seconds / (normal_durations %>% slice(2:nrow(normal_durations)))$seconds
+```
+
+The average of the slowdowns is `r mean(slowdown)` and the median is `r median(slowdown)`, with a standard deviation of `r sd(slowdown)`.
