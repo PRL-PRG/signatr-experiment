@@ -107,6 +107,7 @@ trace_file <- function(file_path, lib_path, output_path) {
   print(file_path)
   callr::r(
     function(x, y) {
+      tracingState(on = FALSE)
       argtracer::trace_file(x, file.path(y, basename(x)))
     },
     list(file_path, output_path),
@@ -149,7 +150,7 @@ run_file2 <- function(file_path, lib_path,r_home = "R-dyntrace") {
       libpath = lib_path,
       arch = r_bin,
       show = TRUE,
-      #env = r_envir,
+      #env = r_envir, #to uncomment if we want to cripple as much as R-dyntrace
       wd = dirname(file_path)
     )
     NA_character_},
@@ -174,4 +175,6 @@ merge_db <- function(db_paths, output_path) {
   db_path
 }
 
-
+remove_blacklisted <- function(file_paths, blacklist) {
+  stringr::str_subset(file_paths, paste0(paste0(blacklist, collapse = "|"), "$"), negate = TRUE)
+}

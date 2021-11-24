@@ -35,7 +35,7 @@ tar_target_resilient <- function(name, command, pattern, ...) {
 }
 
 tar_option_set(
-  packages = c("readr", "covr", "magrittr", "dplyr"),
+  packages = c("readr", "covr", "magrittr", "dplyr", "stringr"),
   #imports = c("sxpdb", "argtracer"),
   #error = "continue" # always continue by default
 )
@@ -63,10 +63,20 @@ list(
     format = "file",
     pattern = map(packages_to_run)
   ),
+  
+  tar_target(
+    blacklist_file,
+    "data/blacklist.txt",
+    format = "file"
+  ),
+  tar_target(
+    blacklist,
+    unique(trimws(read_lines(blacklist_file)))
+  ),
 
   tar_target(
     individual_files,
-    extracted_files,
+    remove_blacklisted(extracted_files, blacklist),
   ),
 
   tar_target(
@@ -78,11 +88,11 @@ list(
     pattern = map(individual_files)
   ),
 
-  tar_target(
-    run_results,
-    run_file(individual_files, lib_path),
-    pattern = map(individual_files)
-  ),
+  # tar_target(
+  #   run_results,
+  #   run_file(individual_files, lib_path),
+  #   pattern = map(individual_files)
+  # ),
 
   tar_target(
     run_results2,

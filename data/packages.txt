@@ -1,2 +1,4 @@
 stringr
-withr
+dplyr
+tab
+ggplot2
