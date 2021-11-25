@@ -15,12 +15,23 @@ knitr::opts_knit$set(root.dir = normalizePath(".."))
 # Performance of tracing 
 
 ```{r durations}
-traced_durations <- tar_meta(fields = "seconds", complete_only = TRUE, names = starts_with("traced_results"))
-normal_durations <- tar_meta(fields = "seconds", complete_only = TRUE, names = starts_with("run_results2"))
+traced_durations <- tar_meta(fields = "seconds", complete_only = TRUE, names = starts_with("traced_results")) %>% filter(name %in% names(tar_read(traced_results)))
+normal_durations <- tar_meta(fields = "seconds", complete_only = TRUE, names = starts_with("run_results2")) %>% filter(name %in% tar_branches(run_results2, map(individual_files))$run_results2)
 ```
 
 ```{r slowdown}
-slowdown <- traced_durations$seconds / (normal_durations %>% slice(2:nrow(normal_durations)))$seconds
+slowdown <- tibble(slow = traced_durations$seconds / normal_durations$seconds)
 ```
 
-The average of the slowdowns is `r mean(slowdown)` and the median is `r median(slowdown)`, with a standard deviation of `r sd(slowdown)`.
+The average of the slowdowns is `r mean(slowdown$slow)` and the median is `r median(slowdown$slow)`, with a standard deviation of `r sd(slowdown$slow)`.
+
+```{r slowdown-plot}
+slowdown %>% ggplot(aes(x = slow)) + geom_histogram(bins = 100)
+```
+
+What are the outliers?
+
+```{r slowdown-outliers}
+outliers <- slowdown %>% filter(slow > 20)
+```
+

@@ -103,6 +103,5 @@ list(
   tar_target(
     merged_db,
     merge_db(traced_results, sxpdb_output),
-    format = "file"
   )
 )
