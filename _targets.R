@@ -63,7 +63,7 @@ list(
     format = "file",
     pattern = map(packages_to_run)
   ),
-  
+
   tar_target(
     blacklist_file,
     "data/blacklist.txt",
@@ -82,7 +82,7 @@ list(
   tar_target(
     traced_results,
     trace_file(individual_files, lib_path, sxpdb_output),
-    format = "file", # what if it takes ages to hash all the databases?
+    #format = "file", # what if it takes ages to hash all the databases?
     # then we can just return the paths but ask targets not to look at the files themselves and assume everything is fine
     # or use a time cue instead of using a hash one?
     pattern = map(individual_files)
