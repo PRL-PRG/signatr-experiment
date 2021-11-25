@@ -35,3 +35,55 @@ What are the outliers?
 outliers <- slowdown %>% filter(slow > 20)
 ```
 
+
+# Estimating the setup slowdown
+
+We know the following values:
+
+- the running time without any tracing and recording per file $T_n$
+- the running time with tracing and recording per file $T_t$
+- the number of values, their size $\text{size}(v)$, and the number of times we see a value $k_v$ , per file
+
+```{r known-values}
+db_paths <- list.dirs("data/sxpdb", recursive =  FALSE) %>% purrr::discard(function(p) endsWith(p, "cran_db"))
+
+l <- list()
+
+i <- 1
+for(db_path in db_paths) {
+  db <- open_db(db_path)
+  
+  meta <- view_meta_db(db)
+    
+  l[[i]] <- tibble::tibble_row(db_path = db_path, size = sum(meta$size), n_values = size_db(db))
+  
+  close_db(db)
+  
+  i <- i + 1
+}
+
+sizes_db <- bind_rows(l)
+```
+
+
+```{r}
+diff_traced_normal <- traced_durations %>% mutate(diff_sec = traced_durations$seconds - normal_durations$seconds)
+
+file_id <- tar_branches(traced_results, individual_files) %>% mutate(file_path = tar_read(individual_files), db_path = file.path("data", "sxpdb", basename(file_path)))
+
+diff_traced_normal <- diff_traced_normal %>% left_join(file_id, by=c("name" = "traced_results")) %>% select(db_path, diff_sec)
+
+df <- diff_traced_normal %>% left_join(sizes_db, by = "db_path")
+```
+
+```{r setup-slowdown-plot}
+ggplot(df, aes(x = size, y = diff_sec,colour = n_values)) + geom_point() + geom_smooth(method = "glm") 
+```
+
+And the model:
+
+```{r}
+mod_df <- glm(diff_sec ~ size, data = df)
+```
+
+So the startup slowdown in seconds is: `r mod_df$coefficients[[1]]`
