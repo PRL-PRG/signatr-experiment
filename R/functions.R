@@ -103,8 +103,8 @@ concatenate_examples <- function(package, examples) {
 }
 
 trace_file <- function(file_path, lib_path, output_path) {
+  #TODO: first remove the current database? i.e. the directory
   # Put the right arch, the right libPaths and so on
-  print(file_path)
   callr::r(
     function(x, y) {
       tracingState(on = FALSE)
