@@ -8,6 +8,7 @@ output: html_notebook
 library(targets)
 library(dplyr)
 library(ggplot2)
+library(sxpdb)
 
 knitr::opts_knit$set(root.dir = normalizePath("..")) 
 ```
@@ -87,3 +88,22 @@ mod_df <- glm(diff_sec ~ size, data = df)
 ```
 
 So the startup slowdown in seconds is: `r mod_df$coefficients[[1]]`
+
+
+# Recording performance
+
+Recording a new value involves:
+
+- serializing it
+- hashing it (SHA1)
+- writing it to the disk if it has not been written yet
+
+The SEXP address optimization can also speed up the process during one run: we create a SEXP address -> hashed serialized SEXP mapping (that just needs to be updated when a new value is allocated at a garbage collected SEXP address).
+
+During one run, we record:
+
+- the first seen duration
+- the next seen durations (as an average)
+- the number of times we have seen the value
+
+We also record the number of times a value has been seen when merging databases.
