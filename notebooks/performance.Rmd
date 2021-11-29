@@ -78,7 +78,7 @@ df <- diff_traced_normal %>% left_join(sizes_db, by = "db_path")
 ```
 
 ```{r setup-slowdown-plot}
-ggplot(df, aes(x = size, y = diff_sec,colour = n_values)) + geom_point() + geom_smooth(method = "glm") 
+ggplot(df, aes(x = size, y = diff_sec,colour = n_values)) + geom_point() + geom_smooth(method = "lm") 
 ```
 
 And the model:

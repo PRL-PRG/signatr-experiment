@@ -60,7 +60,7 @@ list(
     extracted_files,
     extract_code_from_package(packages_to_run, lib_path, extracted_output),
     #deployment = "main",
-    #format = "file",
+    format = "file",
     pattern = map(packages_to_run)
   ),
 
@@ -82,7 +82,7 @@ list(
   tar_target_resilient(
     traced_results,
     trace_file(individual_files, lib_path, sxpdb_output),
-    #format = "file", # what if it takes ages to hash all the databases?
+    #format = "file",
     # then we can just return the paths but ask targets not to look at the files themselves and assume everything is fine
     # or use a time cue instead of using a hash one?
     pattern = map(individual_files)
@@ -103,5 +103,6 @@ list(
   tar_target(
     merged_db,
     merge_db(traced_results, sxpdb_output),
+    format = "file"
   )
 )
