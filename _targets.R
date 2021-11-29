@@ -34,6 +34,19 @@ tar_target_resilient <- function(name, command, pattern, ...) {
   )
 }
 
+tar_target_resilient_file <- function(name, command, pattern, ...) {
+  tname <- deparse(substitute(name))
+  tname_err <- paste0(tname, "_err")
+  sym_err <- parse(text = tname_err)[[1]]
+  wrapped_command <- substitute(tryCatch(COMMAND, error = function(e) e), list(COMMAND = substitute(command)))
+  # Or Filter if we do not want to use purrr
+  compact_command <- substitute(purrr::discard(TNAME_ERR, function(v) inherits(v, "error") | !is.character(v) | length(v) != 1), list(TNAME_ERR = sym_err))
+  list(
+    tar_target_raw(tname_err, wrapped_command, pattern = substitute(pattern), iteration = "list", ...),
+    tar_target_raw(tname, command = compact_command)
+  )
+}
+
 tar_option_set(
   packages = c("readr", "covr", "magrittr", "dplyr", "stringr"),
   #imports = c("sxpdb", "argtracer"),
@@ -79,7 +92,7 @@ list(
     remove_blacklisted(extracted_files, blacklist),
   ),
 
-  tar_target_resilient(
+  tar_target_resilient_file(
     traced_results,
     trace_file(individual_files, lib_path, sxpdb_output),
     #format = "file",
