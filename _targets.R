@@ -4,7 +4,7 @@ library(future)
 library(future.callr)
 source("R/functions.R")
 options(tidyverse.quiet = TRUE)
-options(future.wait.timeout = 60 * 60) # do not allow more than 1h for each task
+options(future.wait.timeout = 15 * 60) # do not allow more than 15min for each task
 
 lib_path = normalizePath("library-local", mustWork = TRUE)
 output_path = "data"
@@ -14,7 +14,7 @@ r_envir = c(callr::rcmd_safe_env(),
            "R_KEEP_PKG_SOURCE"=1,
            "R_ENABLE_JIT"=0,
            "R_COMPILE_PKGS"=0,
-           "R_DISABLE_BYTECODE"=1)
+           "R_DISABLE_BYTECODE"=1) # that one is a 10x performance hit!
 
 plan(callr)
 
@@ -66,13 +66,13 @@ list(
   tar_target(
     packages_to_run,
     install_cran_packages(packages_to_install, lib_path, NULL),
-    deployment = "main"
+    deployment = "main",
+    cue = tar_cue(mode = "always")
   ),
 
   tar_target(
     extracted_files,
     extract_code_from_package(packages_to_run, lib_path, extracted_output),
-    #deployment = "main",
     format = "file",
     pattern = map(packages_to_run)
   ),
@@ -96,16 +96,9 @@ list(
     traced_results,
     trace_file(individual_files, lib_path, sxpdb_output),
     #format = "file",
-    # then we can just return the paths but ask targets not to look at the files themselves and assume everything is fine
-    # or use a time cue instead of using a hash one?
     pattern = map(individual_files)
   ),
 
-  # tar_target(
-  #   run_results,
-  #   run_file(individual_files, lib_path),
-  #   pattern = map(individual_files)
-  # ),
 
   tar_target(
     run_results2,
@@ -116,6 +109,7 @@ list(
   tar_target(
     merged_db,
     merge_db(traced_results, sxpdb_output),
-    format = "file"
+    format = "file",
+    deployment = "main"
   )
 )

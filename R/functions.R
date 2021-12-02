@@ -164,12 +164,22 @@ run_file2 <- function(file_path, lib_path,r_home = "R-dyntrace") {
 
 merge_db <- function(db_paths, output_path) {
   db_path = file.path(normalizePath(output_path, mustWork = TRUE), "cran_db")
+  message("Starting merging\n")
   db <- sxpdb::open_db(db_path)
+  n_fails <- 0
   for(path in db_paths) {
-    small_db <- sxpdb::open_db(path)
-    sxpdb::merge_db(db, small_db)
-    cat("The size of the DB is now ", sxpdb::size_db(db), ", with adding values from ", path, "\n")
-    sxpdb::close_db(small_db)
+    message("Merging ", path, "\n")
+    tryCatch({
+      small_db <- sxpdb::open_db(path)
+      sxpdb::merge_db(db, small_db)
+      message("The size of the DB is now ", sxpdb::size_db(db), ", with adding values from ", path, "\n")
+      sxpdb::close_db(small_db)
+    },
+    error = function(e) {
+      n_fails <- n_fails + 1
+      message("Opening and merging the database failed for DB ", path, "with error ", e, "\n")
+      }
+    )
   }
   sxpdb::close_db(db)
   db_path
