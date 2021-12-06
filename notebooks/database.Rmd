@@ -1,0 +1,64 @@
+---
+title: "Database figures"
+author: "Pierre Donat-Bouillud"
+date: "12/6/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(targets)
+library(dplyr)
+library(ggplot2)
+library(sxpdb)
+
+knitr::opts_knit$set(root.dir = normalizePath("..")) 
+```
+
+## Loading the database
+
+```{r load-db}
+db <- open_db("data/sxpdb/cran_db")
+```
+
+The database has `r size_db(db)` unique values.
+
+```{r meta_info}
+meta <- view_meta_db(db) %>% as_tibble() %>% 
+  mutate(id = row_number() - 1) %>% 
+  mutate(s_type = purrr::map_chr(type, string_sexp_type))
+```
+
+```{r origin_infos}
+origins <- bind_rows(view_origins_db(db), .id = "id") %>% as_tibble() %>% mutate(id = strtoi(id) - 1)
+```
+
+We can now close the database, as we have now all the metadata we wanted as R values.
+```{r closing}
+#close_db(db)
+```
+
+## Types in the database
+
+```{r types}
+meta %>% count(s_type, sort = TRUE) %>% mutate(pc = n / sum(n) * 100, cpc = cumsum(pc)) 
+```
+
+## Sizes
+
+```{r sizes}
+meta %>% group_by(s_type) %>% summarize(size = sum(size)) %>% arrange(desc(size)) %>% mutate(pc = size / sum(size) * 100, cpc = cumsum(pc)) %>% mutate( M_size = size / 1024 / 1024)
+```
+
+
+### Big lists
+
+```{r bug_lists}
+meta %>% filter(s_type == "list") %>% arrange(desc(size)) %>% mutate( M_size = size / 1024 / 1024)
+```
+
+## Frequency of values
+
+```{r freq_values}
+meta %>% rename(n_values = n) %>% count(s_type, wt = n_values, sort = TRUE) %>% mutate(pc = n / sum(n) * 100, cpc = cumsum(pc)) 
+```
+
