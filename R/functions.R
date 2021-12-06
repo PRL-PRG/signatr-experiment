@@ -116,7 +116,7 @@ trace_file <- function(file_path, lib_path, output_path) {
     show = TRUE,
     env = r_envir
   )
-  file.path(normalizePath(output_path, mustWork = TRUE), basename(file_path))
+  #file.path(normalizePath(output_path, mustWork = TRUE), basename(file_path))
 }
 
 run_file <- function(file_path, lib_path, r_home = "R-dyntrace") {
@@ -186,5 +186,8 @@ merge_db <- function(db_paths, output_path) {
 }
 
 remove_blacklisted <- function(file_paths, blacklist) {
+  if(length(blacklist) == 0) {
+    return(file_paths)
+  }
   stringr::str_subset(file_paths, paste0(paste0(blacklist, collapse = "|"), "$"), negate = TRUE)
 }

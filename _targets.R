@@ -92,11 +92,11 @@ list(
     remove_blacklisted(extracted_files, blacklist),
   ),
 
-  tar_target_resilient_file(
+  tar_target(
     traced_results,
     trace_file(individual_files, lib_path, sxpdb_output),
     #format = "file",
-    pattern = map(individual_files)
+    pattern = map(individual_files),
   ),
 
 
@@ -108,7 +108,7 @@ list(
 
   tar_target(
     merged_db,
-    merge_db(traced_results, sxpdb_output),
+    merge_db(traced_results$db_path, sxpdb_output),
     format = "file",
     deployment = "main"
   )
