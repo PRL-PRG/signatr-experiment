@@ -103,7 +103,8 @@ list(
   tar_target(
     run_results2,
     run_file2(individual_files, lib_path, r_home = "R-4.0.2"),
-    pattern = map(individual_files)
+    pattern = map(individual_files),
+    cue = tar_cue(mode = "never")
   ),
 
   tar_target(

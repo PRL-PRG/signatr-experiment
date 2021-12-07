@@ -103,20 +103,20 @@ concatenate_examples <- function(package, examples) {
 }
 
 trace_file <- function(file_path, lib_path, output_path) {
-  #TODO: first remove the current database? i.e. the directory
-  # Put the right arch, the right libPaths and so on
+  dir.create(normalizePath(output_path)) # make sure the output path exists
+  db_path <- file.path(output_path, basename(file_path))
   callr::r(
     function(x, y) {
       tracingState(on = FALSE)
-      argtracer::trace_file(x, file.path(y, basename(x)))
+      argtracer::trace_file(x, y)
     },
-    list(file_path, output_path),
+    list(file_path, db_path),
     libpath = lib_path,
-    arch = "R-dyntrace/bin/R",
+    arch = normalizePath("R-dyntrace/bin/R", mustWork = TRUE),
     show = TRUE,
-    env = r_envir
+    env = r_envir,
+    wd = dirname(file_path)
   )
-  #file.path(normalizePath(output_path, mustWork = TRUE), basename(file_path))
 }
 
 run_file <- function(file_path, lib_path, r_home = "R-dyntrace") {
