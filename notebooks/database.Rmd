@@ -62,3 +62,21 @@ meta %>% filter(s_type == "list") %>% arrange(desc(size)) %>% mutate( M_size = s
 meta %>% rename(n_values = n) %>% count(s_type, wt = n_values, sort = TRUE) %>% mutate(pc = n / sum(n) * 100, cpc = cumsum(pc)) 
 ```
 
+## Length of values
+
+```{r length_values}
+meta %>% group_by(s_type) %>% summarize(med_length = median(length), avg_length = mean(length), sd_length = sd(length)) %>% arrange(desc(med_length))
+```
+
+
+## Number of attributes
+
+```{r nb_attributes}
+meta %>% count(n_attributes, sort = TRUE)
+
+```
+
+```{r attr_per_types}
+meta %>% group_by(s_type) %>% summarize(med_attr = median(n_attributes), avg_attr = mean(n_attributes), sd_attr = sd(n_attributes)) %>% arrange(desc(med_attr))
+```
+

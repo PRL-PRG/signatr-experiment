@@ -1,6 +1,6 @@
 ---
 title: "Performance analysis of the pipeline for the spxdb database"
-output: html_notebook
+output: html_dcument
 ---
 
 
