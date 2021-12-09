@@ -101,7 +101,20 @@ list(
     priority = 1
   ),
 
-  # TODO: filter out failed tasks?
+  tar_target(
+    db_blacklist_file,
+    "data/db-blacklist.txt",
+    format = "file"
+  ),
+  tar_target(
+    db_blacklist,
+    unique(trimws(read_lines(db_blacklist_file)))
+  ),
+  tar_target(
+    db_paths,
+    remove_blacklisted(traced_results$db_path, db_blacklist),
+    format = "file"
+  ),
 
 
   #tar_target(
@@ -114,7 +127,7 @@ list(
   tar_target(
     merged_db,
     with_progress(
-      merge_db(traced_results$db_path, sxpdb_output),
+      merge_db(db_paths, sxpdb_output),
       enable = TRUE), # handlers =  handler_debug,
     #handler_progress(format   = ":spin :current/:total (:message) [:bar] :percent in :elapsed ETA: :eta")
     #handler_pbmcapply
