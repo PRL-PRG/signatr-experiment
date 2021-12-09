@@ -2,6 +2,7 @@ library(targets)
 library(tarchetypes)
 library(future)
 library(future.callr)
+library(progressr)
 source("R/functions.R")
 options(tidyverse.quiet = TRUE)
 options(future.wait.timeout = 15 * 60) # do not allow more than 15min for each task
@@ -109,8 +110,7 @@ list(
 
   tar_target(
     merged_db,
-    merge_db(traced_results$db_path, sxpdb_output),
-    format = "file",
+    with_progress(merge_db(traced_results$db_path, sxpdb_output)),
     deployment = "main"
   )
 )

@@ -3,19 +3,19 @@ install_cran_packages <- function(packages_to_install,
                                   destdir = NULL,
                                   mirror = "https://cloud.r-project.org/") {
   options(repos = mirror)
-  
+
   requested <- packages_to_install
-  
+
   installed <- installed.packages(lib.loc = lib)[, 1]
   missing <- setdiff(requested, installed)
-  
+
   message("Installing ",
           length(missing),
           " packages from ",
           mirror,
           " into ",
           lib)
-  
+
   if (length(missing) > 0) {
     if (!is.null(destdir) &&
         !dir.exists(destdir))
@@ -24,12 +24,12 @@ install_cran_packages <- function(packages_to_install,
         !dir.exists(lib))
       dir.create(lib, recursive = TRUE)
   }
-  
+
   # set package installation timeout
   Sys.setenv(
     `_R_INSTALL_PACKAGES_ELAPSED_TIMEOUT_` = Sys.getenv("_R_INSTALL_PACKAGES_ELAPSED_TIMEOUT_", "5000")
   )
-  
+
   callr::r(
     function(x) {
       install.packages(
@@ -50,13 +50,13 @@ install_cran_packages <- function(packages_to_install,
     show = TRUE,
     env = r_envir
   )
-  
+
   installed <- installed.packages(lib.loc = lib)[, 1]
   successful_installed <- intersect(installed, requested)
-  
+
   # Extract the sources from the missing ones that successfully installed
   installed_missing <- intersect(successful_installed, missing)
-  
+
   if (!is.null(destdir)) {
     archives <-
       list.files(destdir, pattern = "\\.tar\\.gz$", full.names = TRUE)
@@ -64,7 +64,7 @@ install_cran_packages <- function(packages_to_install,
       destfiles <- grep(package, archives, value = TRUE, fixed = TRUE)
       if (length(destfiles) == 0) {
         next
-        
+
       }
       destfile <- destfiles[[1]] # there should be only one anyway
       pkgdir <- file.path(destdir, package)
@@ -79,8 +79,8 @@ install_cran_packages <- function(packages_to_install,
       # It does not remove the tar of the dependencies though...
     }
   }
-  
-  
+
+
   successful_installed
 }
 
@@ -166,25 +166,26 @@ run_file2 <- function(file_path, lib_path,r_home = "R-dyntrace") {
 
 merge_db <- function(db_paths, output_path) {
   db_path = file.path(normalizePath(output_path, mustWork = TRUE), "cran_db")
-  message("Starting merging\n")
+  p <- progressr::progressor(along=db_paths)
+  p("Starting merging", amount = 0)
   db <- sxpdb::open_db(db_path)
-  n_fails <- 0
+  failed_dbs <- tibble(path = character(0), error = character(0))
   for(path in db_paths) {
-    message("Merging ", path, "\n")
+    p(paste0("Merging ", path), amount = 0)
     tryCatch({
       small_db <- sxpdb::open_db(path)
       sxpdb::merge_db(db, small_db)
-      message("The size of the DB is now ", sxpdb::size_db(db), ", with adding values from ", path, "\n")
+      p(paste0("Merged ", path, " ; DB size =", sxpdb::size_db(db)))
       sxpdb::close_db(small_db)
     },
     error = function(e) {
-      n_fails <- n_fails + 1
-      message("Opening and merging the database failed for DB ", path, "with error ", e, "\n")
+      failed_dbs <- c(failed_dbs)
+      p(paste0("Failure  ", path, "with error ", e))
       }
     )
   }
   sxpdb::close_db(db)
-  db_path
+  return(failed_dbs)
 }
 
 remove_blacklisted <- function(file_paths, blacklist) {
