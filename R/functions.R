@@ -167,7 +167,7 @@ run_file2 <- function(file_path, lib_path,r_home = "R-dyntrace") {
 merge_db <- function(db_paths, output_path) {
   db_path = file.path(normalizePath(output_path, mustWork = TRUE), "cran_db")
   p <- progressr::progressor(along=db_paths)
-  p("Starting merging", amount = 0)
+  p(message = "Starting merging", amount = 0)
   db <- sxpdb::open_db(db_path)
   failed_dbs <- tibble(path = character(0), error = character(0))
   for(path in db_paths) {
@@ -175,12 +175,12 @@ merge_db <- function(db_paths, output_path) {
     tryCatch({
       small_db <- sxpdb::open_db(path)
       sxpdb::merge_db(db, small_db)
-      p(paste0("Merged ", path, " ; DB size =", sxpdb::size_db(db)))
+      p(message = paste0("Merged ", path, " ; DB size =", sxpdb::size_db(db)))
       sxpdb::close_db(small_db)
     },
     error = function(e) {
       failed_dbs <- tibble::add_row(failed_dbs, path = db_path, error = as.character(e))
-      p(paste0("Failure  ", path, "with error ", e))
+      p(message = paste0("Failure  ", path, "with error ", e), class = "sticky")
       }
     )
   }
