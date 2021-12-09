@@ -179,7 +179,7 @@ merge_db <- function(db_paths, output_path) {
       sxpdb::close_db(small_db)
     },
     error = function(e) {
-      failed_dbs <- c(failed_dbs)
+      failed_dbs <- tibble::add_row(failed_dbs, path = db_path, error = as.character(e))
       p(paste0("Failure  ", path, "with error ", e))
       }
     )
