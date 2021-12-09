@@ -91,7 +91,8 @@ extract_code_from_package <- function(package, lib_path, output_path) {
     # to be able to feed the concatenation for the examples
     runr::extract_package_code(package,
                                pkg_dir = file.path(lib_path, package),
-                               output_dir = file.path(output_path, package)) %>%
+                               output_dir = file.path(output_path, package),
+			       split_testthat=TRUE) %>%
       mutate(file = file.path(normalizePath(output_path, mustWork = TRUE), package, file)) %>%
       pull(file)
   }
@@ -103,7 +104,8 @@ concatenate_examples <- function(package, examples) {
 }
 
 trace_file <- function(file_path, lib_path, output_path) {
-  dir.create(normalizePath(output_path)) # make sure the output path exists
+  output_path <- normalizePath(output_path)
+  dir.create(output_path) # make sure the output path exists
   db_path <- file.path(output_path, basename(file_path))
   callr::r(
     function(x, y) {

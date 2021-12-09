@@ -1,1 +1,2 @@
 tabmulti.svy.Rd.R
+ZIBBSeqDiscovery/vignettes/vignettes.R
