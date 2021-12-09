@@ -115,7 +115,9 @@ list(
     merged_db,
     with_progress(
       merge_db(traced_results$db_path, sxpdb_output),
-      enable = TRUE), # handlers =  handler_debug
+      enable = TRUE), # handlers =  handler_debug,
+    #handler_progress(format   = ":spin :current/:total (:message) [:bar] :percent in :elapsed ETA: :eta")
+    #handler_pbmcapply
     deployment = "main"
   )
 )
