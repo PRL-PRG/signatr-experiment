@@ -111,7 +111,7 @@ list(
 
   tar_target(
     merged_db,
-    with_progress(merge_db(traced_results$db_path, sxpdb_output)),
+    with_progress(merge_db(traced_results$db_path, sxpdb_output), enable = TRUE), # handlers =  handler_debug
     deployment = "main"
   )
 )
