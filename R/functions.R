@@ -169,7 +169,8 @@ merge_db <- function(db_paths, output_path) {
   p <- progressr::progressor(along=db_paths)
   p(message = "Starting merging", amount = 0)
   db <- sxpdb::open_db(db_path)
-  failed_dbs <- tibble(path = character(0), error = character(0))
+  failed_dbs <- tibble(path = character(0), error = character(0), iteration = integer(0))
+  i <- 1
   for(path in db_paths) {
     p(paste0("Merging ", path), amount = 0)
     tryCatch({
@@ -179,10 +180,11 @@ merge_db <- function(db_paths, output_path) {
       sxpdb::close_db(small_db)
     },
     error = function(e) {
-      failed_dbs <<- tibble::add_row(failed_dbs, path = db_path, error = as.character(e))
+      failed_dbs <<- tibble::add_row(failed_dbs, path = path, error = as.character(e), iteration = i)
       p(message = paste0("Failure  ", path, "with error ", e), class = "sticky")
       }
     )
+    i <- i + 1
   }
   sxpdb::close_db(db)
   return(failed_dbs)
