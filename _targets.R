@@ -112,7 +112,7 @@ list(
   ),
   tar_target(
     db_paths,
-    remove_blacklisted(traced_results$db_path, db_blacklist),
+    remove_blacklisted(traced_results$db_path, db_blacklist, only_real_paths=TRUE),
     format = "file"
   ),
 

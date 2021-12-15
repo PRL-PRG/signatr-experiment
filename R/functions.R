@@ -166,7 +166,7 @@ run_file2 <- function(file_path, lib_path,r_home = "R-dyntrace") {
 
 merge_db <- function(db_paths, output_path) {
   db_path = file.path(normalizePath(output_path, mustWork = TRUE), "cran_db")
-  p <- progressr::progressor(along=db_paths)
+  p <- progressr::progressor(along=db_paths + 1)
   p(message = "Starting merging", amount = 0)
   db <- sxpdb::open_db(db_path)
   failed_dbs <- tibble(path = character(0), error = character(0), iteration = integer(0))
@@ -187,12 +187,21 @@ merge_db <- function(db_paths, output_path) {
     i <- i + 1
   }
   sxpdb::close_db(db)
+  p(message="Wrote metadata.")
   return(failed_dbs)
 }
 
-remove_blacklisted <- function(file_paths, blacklist) {
-  if(length(blacklist) == 0) {
-    return(file_paths)
+remove_blacklisted <- function(file_paths, blacklist, only_real_paths=FALSE) {
+  filtered <- if(length(blacklist) != 0 ) {
+    stringr::str_subset(file_paths, paste0(paste0(blacklist, collapse = "|"), "$"), negate = TRUE) 
+  } else {
+    file_paths
   }
-  stringr::str_subset(file_paths, paste0(paste0(blacklist, collapse = "|"), "$"), negate = TRUE)
+  if(only_real_paths) {
+    return(filtered[dir.exists(filtered)])
+  }
+  else {
+    return(filtered)
+  }
+  
 }
