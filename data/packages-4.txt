@@ -1,0 +1,4 @@
+stringr
+dplyr
+tab
+ggplot2
