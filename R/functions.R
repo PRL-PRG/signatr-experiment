@@ -106,7 +106,8 @@ concatenate_examples <- function(package, examples) {
 trace_file <- function(file_path, lib_path, output_path) {
   output_path <- normalizePath(output_path)
   dir.create(output_path) # make sure the output path exists
-  db_path <- file.path(output_path, basename(file_path))
+  db_name <- paste(basename(dirname(dirname(file_path))), basename(dirname(file_path)), basename(file_path), sep = "-")
+  db_path <- file.path(output_path, db_name)
   callr::r(
     function(x, y) {
       tracingState(on = FALSE)
