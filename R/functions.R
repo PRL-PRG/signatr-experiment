@@ -108,6 +108,12 @@ trace_file <- function(file_path, lib_path, output_path) {
   dir.create(output_path) # make sure the output path exists
   db_name <- paste(basename(dirname(dirname(file_path))), basename(dirname(file_path)), basename(file_path), sep = "-")
   db_path <- file.path(output_path, db_name)
+  
+  # the db already exists but could be in a corrupted state
+  if(dir.exists(db_path)) {
+    unlink(db_path, recursive = TRUE)
+  }
+  
   callr::r(
     function(x, y) {
       tracingState(on = FALSE)
@@ -204,5 +210,4 @@ remove_blacklisted <- function(file_paths, blacklist, only_real_paths=FALSE) {
   else {
     return(filtered)
   }
-  
 }

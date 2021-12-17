@@ -98,7 +98,8 @@ list(
     trace_file(individual_files, lib_path, sxpdb_output),
     #format = "file",
     pattern = map(individual_files),
-    error = "abridge",
+    #error = "abridge",
+    error = "continue",
     priority = 1
   ),
 
