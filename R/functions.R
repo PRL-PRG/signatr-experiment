@@ -110,8 +110,19 @@ trace_file <- function(file_path, lib_path, output_path) {
   db_path <- file.path(output_path, db_name)
   
   # the db already exists but could be in a corrupted state
+  # if it is, we remove the db and start fresh
   if(dir.exists(db_path)) {
-    unlink(db_path, recursive = TRUE)
+    tryCatch({
+      db <- open_db(db_path)
+      errors <- check_db(db)
+      close_db(db)
+      
+      if(length(errors) > 0) {
+        unlink(db_path, recursive = TRUE)
+      }
+    }
+    error = function(e) unlink(db_path, recursive = TRUE)
+    )
   }
   
   callr::r(
