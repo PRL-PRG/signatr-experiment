@@ -120,7 +120,7 @@ trace_file <- function(file_path, lib_path, output_path) {
       if(length(errors) > 0) {
         unlink(db_path, recursive = TRUE)
       }
-    }
+    },
     error = function(e) unlink(db_path, recursive = TRUE)
     )
   }
@@ -184,7 +184,7 @@ run_file2 <- function(file_path, lib_path,r_home = "R-dyntrace") {
 
 merge_db <- function(db_paths, output_path) {
   db_path = file.path(normalizePath(output_path, mustWork = TRUE), "cran_db")
-  p <- progressr::progressor(along=db_paths + 1)
+  p <- progressr::progressor(length(db_paths) + 1)
   p(message = "Starting merging", amount = 0)
   db <- sxpdb::open_db(db_path)
   failed_dbs <- tibble(path = character(0), error = character(0), iteration = integer(0))
@@ -220,5 +220,14 @@ remove_blacklisted <- function(file_paths, blacklist, only_real_paths=FALSE) {
   }
   else {
     return(filtered)
+  }
+}
+
+fix_traced_res <- function(df) {
+  if(length(df) > 0 && !is.character(df$error)) {
+    df %>% mutate(error = as.character(error))
+  }
+  else {
+    df
   }
 }
