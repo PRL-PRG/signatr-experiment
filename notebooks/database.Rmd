@@ -24,8 +24,7 @@ The database has `r size_db(db)` unique values.
 
 ```{r meta_info}
 meta <- view_meta_db(db) %>% as_tibble() %>% 
-  mutate(id = row_number() - 1) %>% 
-  mutate(s_type = purrr::map_chr(type, string_sexp_type))
+  mutate(id = row_number() - 1)
 ```
 
 ```{r origin_infos}
@@ -40,32 +39,32 @@ We can now close the database, as we have now all the metadata we wanted as R va
 ## Types in the database
 
 ```{r types}
-meta %>% count(s_type, sort = TRUE) %>% mutate(pc = n / sum(n) * 100, cpc = cumsum(pc)) 
+meta %>% count(type, sort = TRUE) %>% mutate(pc = n / sum(n) * 100, cpc = cumsum(pc)) %>% mutate(s_type = purrr::map_chr(type, string_sexp_type), .before = type)
 ```
 
 ## Sizes
 
 ```{r sizes}
-meta %>% group_by(s_type) %>% summarize(size = sum(size)) %>% arrange(desc(size)) %>% mutate(pc = size / sum(size) * 100, cpc = cumsum(pc)) %>% mutate( M_size = size / 1024 / 1024)
+meta %>% group_by(type) %>% summarize(size = sum(size)) %>% arrange(desc(size)) %>% mutate(pc = size / sum(size) * 100, cpc = cumsum(pc)) %>% mutate( M_size = size / 1024 / 1024) %>% mutate(s_type = purrr::map_chr(type, string_sexp_type), .before = type)
 ```
 
 
 ### Big lists
 
 ```{r bug_lists}
-meta %>% filter(s_type == "list") %>% arrange(desc(size)) %>% mutate( M_size = size / 1024 / 1024)
+meta %>% filter(type == 19) %>% arrange(desc(size)) %>% mutate( M_size = size / 1024 / 1024) %>% mutate(s_type = purrr::map_chr(type, string_sexp_type), .before = type)
 ```
 
 ## Frequency of values
 
 ```{r freq_values}
-meta %>% rename(n_values = n) %>% count(s_type, wt = n_values, sort = TRUE) %>% mutate(pc = n / sum(n) * 100, cpc = cumsum(pc)) 
+meta %>% rename(n_values = n) %>% count(type, wt = n_values, sort = TRUE) %>% mutate(pc = n / sum(n) * 100, cpc = cumsum(pc)) %>% mutate(s_type = purrr::map_chr(type, string_sexp_type), .before = type)
 ```
 
 ## Length of values
 
 ```{r length_values}
-meta %>% group_by(s_type) %>% summarize(med_length = median(length), avg_length = mean(length), sd_length = sd(length)) %>% arrange(desc(med_length))
+meta %>% group_by(type) %>% summarize(med_length = median(length), avg_length = mean(length), sd_length = sd(length)) %>% arrange(desc(med_length)) %>% mutate(s_type = purrr::map_chr(type, string_sexp_type), .before = type)
 ```
 
 
@@ -77,6 +76,6 @@ meta %>% count(n_attributes, sort = TRUE)
 ```
 
 ```{r attr_per_types}
-meta %>% group_by(s_type) %>% summarize(med_attr = median(n_attributes), avg_attr = mean(n_attributes), sd_attr = sd(n_attributes)) %>% arrange(desc(med_attr))
+meta %>% group_by(type) %>% summarize(med_attr = median(n_attributes), avg_attr = mean(n_attributes), sd_attr = sd(n_attributes)) %>% arrange(desc(med_attr)) %>% mutate(s_type = purrr::map_chr(type, string_sexp_type), .before = type)
 ```
 
