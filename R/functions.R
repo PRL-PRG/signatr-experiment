@@ -108,7 +108,7 @@ trace_file <- function(file_path, lib_path, output_path) {
   dir.create(output_path) # make sure the output path exists
   db_name <- paste(basename(dirname(dirname(file_path))), basename(dirname(file_path)), basename(file_path), sep = "-")
   db_path <- file.path(output_path, db_name)
-  
+
   # the db already exists but could be in a corrupted state
   # if it is, we remove the db and start fresh
   if(dir.exists(db_path)) {
@@ -116,7 +116,7 @@ trace_file <- function(file_path, lib_path, output_path) {
       db <- open_db(db_path)
       errors <- check_db(db)
       close_db(db)
-      
+
       if(length(errors) > 0) {
         unlink(db_path, recursive = TRUE)
       }
@@ -124,7 +124,7 @@ trace_file <- function(file_path, lib_path, output_path) {
     error = function(e) unlink(db_path, recursive = TRUE)
     )
   }
-  
+
   callr::r(
     function(x, y) {
       tracingState(on = FALSE)
@@ -186,13 +186,13 @@ merge_db <- function(db_paths, output_path) {
   db_path = file.path(normalizePath(output_path, mustWork = TRUE), "cran_db")
   p <- progressr::progressor(length(db_paths) + 1)
   p(message = "Starting merging", amount = 0)
-  db <- sxpdb::open_db(db_path)
+  db <- sxpdb::open_db(db_path, write_mode = TRUE, quiet = FALSE)
   failed_dbs <- tibble(path = character(0), error = character(0), iteration = integer(0))
   i <- 1
   for(path in db_paths) {
     p(paste0("Merging ", path), amount = 0)
     tryCatch({
-      small_db <- sxpdb::open_db(path)
+      small_db <- sxpdb::open_db(path, write_mode = TRUE, quiet = FALSE)
       sxpdb::merge_db(db, small_db)
       p(message = paste0("Merged ", path, " ; DB size =", sxpdb::size_db(db)))
       sxpdb::close_db(small_db)
@@ -211,7 +211,7 @@ merge_db <- function(db_paths, output_path) {
 
 remove_blacklisted <- function(file_paths, blacklist, only_real_paths=FALSE) {
   filtered <- if(length(blacklist) != 0 ) {
-    stringr::str_subset(file_paths, paste0(paste0(blacklist, collapse = "|"), "$"), negate = TRUE) 
+    stringr::str_subset(file_paths, paste0(paste0(blacklist, collapse = "|"), "$"), negate = TRUE)
   } else {
     file_paths
   }
