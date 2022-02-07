@@ -187,26 +187,45 @@ merge_db <- function(db_paths, output_path) {
   p <- progressr::progressor(length(db_paths) + 1)
   p(message = "Starting merging", amount = 0)
   db <- sxpdb::open_db(db_path, write_mode = TRUE, quiet = FALSE)
-  failed_dbs <- tibble(path = character(0), error = character(0), iteration = integer(0))
+  # info_dbs <- list(tibble::tibble_row(path = character(0), db_size_before = integer(0), added_values= integer(0),
+  #                    small_db_size = integer(0), duration = double(0), 
+  #                    error = character(0), iteration = integer(0)))
+  
+  info_dbs <- vector("list", length(db_paths))
   i <- 1
   for(path in db_paths) {
     p(paste0("Merging ", path), amount = 0)
-    tryCatch({
-      small_db <- sxpdb::open_db(path, write_mode = TRUE, quiet = FALSE)
-      sxpdb::merge_db(db, small_db)
+    db_s_before <- sxpdb::size_db(db)
+    # tryCatch({
+      small_db <- sxpdb::open_db(path, write_mode = TRUE, quiet = TRUE)
+      small_db_s <- sxpdb::size_db(small_db)
+      ret <- 0
+      time <- 0
+      if(small_db_s > 0) { # == 0 actually happens!
+        time <- system.time(ret <- sxpdb::merge_db(db, small_db))
+        time <- time["elapsed"]
+      }
       p(message = paste0("Merged ", path, " ; DB size =", sxpdb::size_db(db)))
       sxpdb::close_db(small_db)
-    },
-    error = function(e) {
-      failed_dbs <<- tibble::add_row(failed_dbs, path = path, error = as.character(e), iteration = i)
-      p(message = paste0("Failure  ", path, "with error ", e), class = "sticky")
-      }
-    )
+      info_dbs[[i]] <- tibble::tibble_row(path = path, db_size_before = db_s_before, 
+                                   added_values = if(ret == 0) o else ret - db_s_before, 
+                                   small_db_size = small_db_s, 
+                                   duration = time,
+                                   error = NA_character_, iteration = i)
+    # },
+    # error = function(e) {
+    #   info_dbs <<- tibble::add_row(info_dbs, db_size_before = db_size_before, 
+    #                                added_values = NA_integer_, small_db_size = NA_integer_,
+    #                                duration = NA_real_,
+    #                                path = path, error = as.character(e), iteration = i)
+    #   p(message = paste0("Failure  ", path, "with error ", e), class = "sticky")
+    #   }
+    # )
     i <- i + 1
   }
   sxpdb::close_db(db)
   p(message="Wrote metadata.")
-  return(failed_dbs)
+  return(info_dbs)
 }
 
 remove_blacklisted <- function(file_paths, blacklist, only_real_paths=FALSE) {
