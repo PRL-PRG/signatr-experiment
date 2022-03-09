@@ -90,17 +90,13 @@ po/*~
 ################################################################################
 ## Custom gitignore
 ################################################################################
-/CRAN/
-/argtracer/
-/instrumentr/
-/library/
-/library-local/
-/packages.txt
-/record-dev/
 /R-dyntrace
-/run/
+/argtracer/
+/contractr/
+/generatr/
+/injectr/
+/library/
+/packages.txt
 /runr/
-/signatr/
 /sxpdb/
-/_targets/
-data/extracted-code/
+/tastr/
