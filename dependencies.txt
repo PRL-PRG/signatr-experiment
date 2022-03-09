@@ -3,6 +3,8 @@ digest
 dplyr
 fs
 fst
+future
+future.callr
 lubridate
 magrittr
 optparse
@@ -11,10 +13,12 @@ progress
 purrr
 readr
 rjson
+rlang
 rmarkdown
 stringr
-tidyverse
+targets
+tarchetypes
 tibble
 tidyr
+tidyverse
 withr
-pbapply

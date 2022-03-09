@@ -1,0 +1,13 @@
+name|type|data|command|depend|seed|path|time|size|bytes|format|iteration|parent|children|seconds|warnings|error
+CORPUS|object|f69019f3a84cdedd||||||||||||||
+DB_DIR|object|2255db4eb4408b8b||||||||||||||
+lib_dir|object|c80a5857599e487f||||||||||||||
+TIMEOUT|object|8587ccc456de1c8b||||||||||||||
+R_ENVIR|object|ad1d5f0e78faef86||||||||||||||
+LIB_DIR|object|c80a5857599e487f||||||||||||||
+BUDGET|object|43cee3b5090dadd7||||||||||||||
+OUT_DIR|object|d7adfc39060f91a9||||||||||||||
+create_dir|function|9834e6a76adf7790||||||||||||||
+packages_bin|stem|9bd083b9b8380b80|fd7bd1e920d90a4d|8beb6a49c6b35cc2|-1865569558|out/library/stringr|t19058.7187323452s|3c3f5524d905d147|475041|file|vector|||203.656||
+packages|stem|7bcd17710b2aa2b9|22f4562c31e72551|f37dc5e6d6660e6f|368243192||t19058.7199644614s|c8c08b546a334f8d|170|rds|vector||packages_ed524304|0.001||
+fuzz_89eed17e|branch||9024f44b8ed86cc7|b1ac077f55aaf5ba|-64909931||t19058.720235148s||0|rds|vector|fuzz||23.376||no item called packagestringr on the search list

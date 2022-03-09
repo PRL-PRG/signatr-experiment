@@ -1,171 +1,120 @@
 # signatr-experiment
 
 This is a skeleton project for running signatr experiments.
-The idea is to have an isolated environment in which one can run the fuzzer.
-
-There is also a new pipeline using the `targets` package, see below for more explanations.
 
 ## Installation
 
-### Experimental setup
-
 ``` sh
-$ git clone ssh://git@github.com/PRL-PRG/signatr-experiment
-$ cd signatr-experiment
+git clone ssh://git@github.com/PRL-PRG/signatr-experiment
+cd signatr-experiment
 ```
 **Important: all of the following commands should be run inside the cloned repository!**
 
-### Docker image
+- Install missing native dependencies (if applicable)
 
-If the docker image has not yet been created, run
+    ```sh
+    sudo apt-get install libharfbuzz-dev libfribidi-dev
+    ```
 
-```sh
-$ make -C docker-image
-```
+- Install R-4.0.2
 
-In the following, we will use either:
+    ```sh
+    cd R-4.0.2
+    curl https://cran.r-project.org/src/base/R-4/R-4.0.2.tar.gz | tar --strip-components=1 -xzf -
+    ./build.sh
+    ```
 
-```sh
-$ command
-```
+- Install R-dyntrace
 
-or
+    ```sh
+    git clone git@github.com:PRL-PRG/R-dyntrace
+    cd R-dyntrace
+    git checkout r-4.0.2
+    ./build
+    ```
 
-```sh
-[docker]$ command
-```
+- Clone runr
 
-indicating if a `command` shall be run directly or in the docker container.
+    ```
+    git clone git@github.com:PRL-PRG/runr
+    ```
+    
+- Install dependencies
 
-To run a command in a docker container, you can either run:
+    ```sh
+    source ./env-4.0.2.sh
+    ./runr/inst/install-cran-packages.R dependencies.txt
+    ```
 
-```sh
-$ ./in-docker.sh command
-```
+- Install runr
 
-which will spawn a new disposable container which will be removed after the command is finished, or
+    ```sh
+    make -C runr install
+    ```
 
-```sh
-$ ./in-docker.sh bash
-```
+- Install tastr
 
-which will spawn an interactive shell in the container.
+    ```sh
+    git clone git@github.com:PRL-PRG/tastr
+    make -C tastr build
+    ```
 
-### Dependencies
+- Install injectr
 
-Get the dependencies. The reason why we do not put them yet in the image is that
-we might want to have some local changes to them.
+    ```
+    git clone git@github.com:PRL-PRG/injectr
+    make -C injectr install
+    ```
 
-```sh
-$ git clone ssh://git@github.com/PRL-PRG/sxpdb
-$ git clone ssh://git@github.com/PRL-PRG/argtracer
-$ git clone ssh://git@github.com/PRL-PRG/instrumentr -b c-api
-$ git clone ssh://git@github.com/PRL-PRG/runr
-$ git clone ssh://git@github.com/PRL-PRG/signatr
-```
+- Install contractr
 
+    ```
+    git clone git@github.com:PRL-PRG/contractr
+    make -C contractr install
+    ```
 
-``` sh
-$mkdir library
-[docker]$ make libs
-```
+- Install sxpdb
 
-This should populate `library` directory with all the above libraries as well as with all their dependencies.
+    ```
+    git clone git@github.com:PRL-PRG/sxpdb
+    make -C sxpdb install
+    ```
 
-**Important: double check that you see your username!**
+- Install generatr
 
-## Tasks
+    ```sh
+    git clone git@github.com:reallyTG/generatr.git
+    make -C generatr install
+    ```
 
-The `Makefile` drives the experiment.
+- Install argtracer
 
-### TL;DR
+    ```sh
+    source env-dyntrace.sh
+    git clone git@github.com:PRL-PRG/argtracer
+    make -C argtracer install
+    ```
 
-```sh
-[docker]$ echo stringr > packages.txt
-[docker]$ make install-packages
-[docker]$ make trace
-```
+## Fuzzing
 
-### Installing packages
-
-Each of the experiment task relies on a **corpus of packages**.
-This corpus is defined in the `packages.txt` file - one line per package.
-To install new packages, run:
-
-```sh
-[docker]$ make install-packages
-```
-
-Note: it will not remove installed packages.
-
-### Extract package runnable code
-
-```sh
-[docker]$ make extract-code
-```
-
-This shall extract all runnable code from the corpus packages.
-The result will be in `run/extracted-code`.
-Concretely, in `run/extracted-code/runnable-code.csv`:
-
-```csv
-package,file,type,language,blank,comment,code
-stringr,tests/testthat-drv-case.R,tests,R,4,0,12
-stringr,tests/testthat-drv-conv.R,tests,R,2,0,6
-```
-
-### Running extracted code
+Set up the environment:
 
 ```sh
-[docker]$ make run-code
+source env-4.0.2.sh
 ```
 
-This shall run all the extracted code.
-The result will be in `run/run-code`.
-Concretely, in `run/run-code/parallel.csv`:
+The pipeline is in `pipeline-fuzzing/`.
 
-```sh
-cat run/run-code/parallel.csv
-Seq,Host,Starttime,JobRuntime,Send,Receive,Exitval,Signal,Command,V1,Stdout,Stderr
-1,:,1623677476.696,0.745,0,0,0,0," /home/krikava/Research/Projects/signatr/signatr-experiment/scripts/run-r-file.sh -t 35m /home/krikava/Research/Projects/signatr/signatr-experiment/run/runnable-code/stringr/tests/testthat-drv-case.R",stringr/tests/testthat-drv-case.R,,
-```
+## Generating database
 
-The interesting part is in `Exitval` - non-zero means a failure.
-If something is odd, the details should be in `run/run-code/<package>/<type>/<file>/task-output.txt`
-
-
-### Wrap package runnable code
-
-For tracing, we need to wrap all the extracted code with some bootstrapping code:
-
-```sh
-[docker]$ make wrap-code
-```
-
-This will use `scripts/wrap-template.R` to replace `.BODY.` with the actual file.
-The result will be in `run/wrapped-code` and it is similar to extracted code.
-
-### Trace
-
-```sh
-[docker]$ make trace
-```
-
-The results should be in `run/trace`.
-Concretely, in `run/trace/parallel.csv` like in run code task.
-The actual `db` will be in `run/trace/<package>/<type>/<file>/db`
-
-# `targets` pipeline
-
-For a local run, install `R-dyntrace`, then set up the right environment:
+Set up the right environment:
 
 ```sh 
-source ./environment.sh
+source env-dyntrace.sh
 ```
 
-- install the dependencies (a combination of `git clone` and `make instrumentr`, `make ...`).
-- install the `targets`, `future`, `future.callr` packages
-- run the pipeline:
+The pipeline is in `pipeline-dbgen/`.
+To run it, start R and
 
 ```R
 targets::tar_make()
