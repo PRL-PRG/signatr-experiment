@@ -11,13 +11,16 @@ library(dplyr)
 library(ggplot2)
 library(sxpdb)
 
-knitr::opts_knit$set(root.dir = normalizePath("..")) 
+knitr::opts_knit$set(root.dir = normalizePath(".")) #...
+
+here::i_am("notebooks/database.Rmd")
+library(here)
 ```
 
 ## Loading the database
 
 ```{r load-db}
-db <- open_db("data/sxpdb/cran_db")
+db <- open_db(here("data", "sxpdb", "cran_db"))
 ```
 
 The database has `r size_db(db)` unique values.
@@ -67,6 +70,11 @@ meta %>% rename(n_values = n) %>% count(type, wt = n_values, sort = TRUE) %>% mu
 meta %>% group_by(type) %>% summarize(med_length = median(length), avg_length = mean(length), sd_length = sd(length)) %>% arrange(desc(med_length)) %>% mutate(s_type = purrr::map_chr(type, string_sexp_type), .before = type)
 ```
 
+```{r length_histogram}
+lengths_dist <- meta %>% count(length, sort = TRUE)
+lengths_dist %>% filter(length > 0, length < 10^7) %>% ggplot(aes(x = length, y = n)) + geom_col(width = 1, color = "black") + scale_y_log10() +  scale_x_continuous(breaks = scales::log_breaks(n = 10)) + theme(axis.text = element_text(size = 12))
+```
+
 
 ## Number of attributes
 
@@ -77,5 +85,15 @@ meta %>% count(n_attributes, sort = TRUE)
 
 ```{r attr_per_types}
 meta %>% group_by(type) %>% summarize(med_attr = median(n_attributes), avg_attr = mean(n_attributes), sd_attr = sd(n_attributes)) %>% arrange(desc(med_attr)) %>% mutate(s_type = purrr::map_chr(type, string_sexp_type), .before = type)
+```
+
+## Real vectors
+
+```{r real_vectors}
+meta %>% filter(type == 14) %>% count(length, sort = TRUE) %>% mutate(pc = n / sum(n) * 100, cpc = cumsum(pc))
+```
+
+```{r real_vector_length_plot}
+meta %>% filter(type == 14) %>% ggplot(aes(x = length)) + geom_bar()
 ```
 

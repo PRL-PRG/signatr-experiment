@@ -186,7 +186,7 @@ merge_db <- function(db_paths, output_path) {
   db_path = file.path(normalizePath(output_path, mustWork = TRUE), "cran_db")
   p <- progressr::progressor(length(db_paths) + 1)
   p(message = "Starting merging", amount = 0)
-  db <- sxpdb::open_db(db_path, write_mode = TRUE, quiet = FALSE)
+  db <- sxpdb::open_db(db_path, mode = TRUE, quiet = FALSE)
   # info_dbs <- list(tibble::tibble_row(path = character(0), db_size_before = integer(0), added_values= integer(0),
   #                    small_db_size = integer(0), duration = double(0), 
   #                    error = character(0), iteration = integer(0)))
@@ -197,7 +197,7 @@ merge_db <- function(db_paths, output_path) {
     p(paste0("Merging ", path), amount = 0)
     db_s_before <- sxpdb::size_db(db)
     # tryCatch({
-      small_db <- sxpdb::open_db(path, write_mode = TRUE, quiet = TRUE)
+      small_db <- sxpdb::open_db(path, mode = "merge", quiet = TRUE)
       small_db_s <- sxpdb::size_db(small_db)
       ret <- 0
       time <- 0
@@ -208,14 +208,16 @@ merge_db <- function(db_paths, output_path) {
       p(message = paste0("Merged ", path, " ; DB size =", sxpdb::size_db(db)))
       sxpdb::close_db(small_db)
       info_dbs[[i]] <- tibble::tibble_row(path = path, db_size_before = db_s_before, 
-                                   added_values = if(ret == 0) o else ret - db_s_before, 
+                                   added_values = if(ret == 0) 0 else ret - db_s_before, 
                                    small_db_size = small_db_s, 
+                                   small_db_bytes = directory_size(path),
                                    duration = time,
                                    error = NA_character_, iteration = i)
     # },
     # error = function(e) {
     #   info_dbs <<- tibble::add_row(info_dbs, db_size_before = db_size_before, 
     #                                added_values = NA_integer_, small_db_size = NA_integer_,
+    #                                small_db_bytes = directory_size(path),
     #                                duration = NA_real_,
     #                                path = path, error = as.character(e), iteration = i)
     #   p(message = paste0("Failure  ", path, "with error ", e), class = "sticky")
@@ -249,4 +251,8 @@ fix_traced_res <- function(df) {
   else {
     df
   }
+}
+
+directory_size <- function(dir_name) {
+  sum(file.info(list.files(path = dir_name, recursive = T, full.names = T))$size)
 }
