@@ -27,9 +27,8 @@ cd signatr-experiment
 - Install R-dyntrace
 
     ```sh
-    git clone git@github.com:PRL-PRG/R-dyntrace
+    git clone -b r-4.0.2 git@github.com:PRL-PRG/R-dyntrace
     cd R-dyntrace
-    git checkout r-4.0.2
     ./build
     ```
 
@@ -69,7 +68,7 @@ cd signatr-experiment
 - Install contractr
 
     ```
-    git clone git@github.com:PRL-PRG/contractr
+    git clone -b devel git@github.com:PRL-PRG/contractr
     make -C contractr install
     ```
 
@@ -83,7 +82,7 @@ cd signatr-experiment
 - Install generatr
 
     ```sh
-    git clone git@github.com:reallyTG/generatr.git
+    git clone -b devel git@github.com:reallyTG/generatr.git
     make -C generatr install
     ```
 
@@ -96,6 +95,16 @@ cd signatr-experiment
     ```
 
 ## Fuzzing
+
+### Build the DB index
+
+```R
+> library(sxpdb)
+> db <- open_db("/mnt/ocfs_vol_00/cran_db-3/", mode=TRUE)
+> build_indexes(db)
+NULL
+> close_db(db)
+```
 
 Set up the environment:
 
