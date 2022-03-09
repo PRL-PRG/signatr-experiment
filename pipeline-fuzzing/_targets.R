@@ -44,6 +44,8 @@ print(DB_DIR)
 
 lib_dir <- create_dir(LIB_DIR)
 
+library(sxpdb)
+
 list(
     tar_target(
         packages_bin,
@@ -67,14 +69,49 @@ list(
         }
     ),
     tar_target(
-        fuzz,
+        functions,
         {
-           value_db <- generatr::load_db(DB_DIR)
-           origins_db <- sxpdb::view_origins_db(value_db) %>% as_tibble
-           meta_db <- sxpdb::view_meta_db(value_db) %>% as_tibble
-           generatr::fuzz_every_fn_in_pkg(packages, value_db, origins_db, meta_db, budget = BUDGET)
+            runr::metadata_functions(packages$package) %>%
+                filter(exported, !is_s3_dispatch, !is_s3_method)
         },
         pattern = map(packages)
+    ),
+    tar_target(
+        functions_,
+        dplyr::bind_rows(functions)
+    ),
+    tar_target(
+        origins_db,
+        {
+            value_db <- sxpdb::open_db(DB_DIR)
+            sxpdb::view_origins_db(value_db) %>%
+                as_tibble
+        }
+    ),
+    tar_target(
+        meta_db,
+        {
+            value_db <- sxpdb::open_db(DB_DIR)
+            sxpdb::view_meta_db(value_db) %>%
+                as_tibble
+        }
+    ),
+    tar_target(
+        fuzz,
+        {
+            value_db <- sxpdb::open_db(DB_DIR)
+            fun <- get(functions_$fun_name, envir = getNamespace(functions_$pkg_name), mode = "function")
+            generatr::feedback_directed_call_generator_all_db(
+                fn = fun,
+                functions_$pkg_name,
+                functions_$fun_name,
+                value_db,
+                origins_db,
+                meta_db,
+                budget = BUDGET
+            )
+        },
+        pattern = map(functions_)
     )
     # tar_target(
     #     programs_metadata,
