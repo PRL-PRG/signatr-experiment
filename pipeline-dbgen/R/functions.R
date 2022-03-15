@@ -46,7 +46,7 @@ install_cran_packages <- function(packages_to_install,
     },
     list(missing),
     libpath = lib_path,
-    arch = "R-dyntrace/bin/R",
+    arch = "../R-dyntrace/bin/R",
     show = TRUE,
     env = r_envir
   )
@@ -132,14 +132,14 @@ trace_file <- function(file_path, lib_path, output_path) {
     },
     list(file_path, db_path),
     libpath = lib_path,
-    arch = normalizePath("R-dyntrace/bin/R", mustWork = TRUE),
+    arch = normalizePath("../R-dyntrace/bin/R", mustWork = TRUE),
     show = TRUE,
     env = r_envir,
     wd = dirname(file_path)
   )
 }
 
-run_file <- function(file_path, lib_path, r_home = "R-dyntrace") {
+run_file <- function(file_path, lib_path, r_home = "../R-dyntrace") {
   # Put the right arch, the right libPaths and so on
   res <- callr::rcmd(
     "BATCH",
@@ -156,7 +156,7 @@ run_file <- function(file_path, lib_path, r_home = "R-dyntrace") {
   )
 }
 
-run_file2 <- function(file_path, lib_path,r_home = "R-dyntrace") {
+run_file2 <- function(file_path, lib_path,r_home = "../R-dyntrace") {
   r_bin <- normalizePath(file.path(r_home, "bin", "R"), mustWork = TRUE)
   # Put the right arch, the right libPaths and so on
   status <- tryCatch({

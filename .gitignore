@@ -100,3 +100,10 @@ po/*~
 /runr/
 /sxpdb/
 /tastr/
+
+
+/R-4.0.2
+/R-4.0.2-dbg
+/pipeline-dbgen/data/sxpdb
+/pipeline-dbgen/_targets
+/pipeline-dbgen/data/extracted-code

@@ -1,1 +1,5 @@
-chantrics
+ggplot2
+dplyr
+stringr
+glue
+data.table
