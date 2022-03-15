@@ -182,15 +182,15 @@ run_file2 <- function(file_path, lib_path,r_home = "../R-dyntrace") {
   )
 }
 
-merge_db <- function(db_paths, output_path) {
+merge_db2 <- function(db_paths, output_path) {
   db_path = file.path(normalizePath(output_path, mustWork = TRUE), "cran_db")
   p <- progressr::progressor(length(db_paths) + 1)
   p(message = "Starting merging", amount = 0)
   db <- sxpdb::open_db(db_path, mode = TRUE, quiet = FALSE)
   # info_dbs <- list(tibble::tibble_row(path = character(0), db_size_before = integer(0), added_values= integer(0),
-  #                    small_db_size = integer(0), duration = double(0), 
+  #                    small_db_size = integer(0), duration = double(0),
   #                    error = character(0), iteration = integer(0)))
-  
+
   info_dbs <- vector("list", length(db_paths))
   i <- 1
   for(path in db_paths) {
@@ -207,15 +207,15 @@ merge_db <- function(db_paths, output_path) {
       }
       p(message = paste0("Merged ", path, " ; DB size =", sxpdb::size_db(db)))
       sxpdb::close_db(small_db)
-      info_dbs[[i]] <- tibble::tibble_row(path = path, db_size_before = db_s_before, 
-                                   added_values = if(ret == 0) 0 else ret - db_s_before, 
-                                   small_db_size = small_db_s, 
+      info_dbs[[i]] <- tibble::tibble_row(path = path, db_size_before = db_s_before,
+                                   added_values = if(ret == 0) 0 else ret - db_s_before,
+                                   small_db_size = small_db_s,
                                    small_db_bytes = directory_size(path),
                                    duration = time,
                                    error = NA_character_, iteration = i)
     # },
     # error = function(e) {
-    #   info_dbs <<- tibble::add_row(info_dbs, db_size_before = db_size_before, 
+    #   info_dbs <<- tibble::add_row(info_dbs, db_size_before = db_size_before,
     #                                added_values = NA_integer_, small_db_size = NA_integer_,
     #                                small_db_bytes = directory_size(path),
     #                                duration = NA_real_,
@@ -228,6 +228,10 @@ merge_db <- function(db_paths, output_path) {
   sxpdb::close_db(db)
   p(message="Wrote metadata.")
   return(info_dbs)
+}
+
+merge_db <- function(db_paths, output_path) {
+    sxpdb::merge_all_dbs(db_paths, output_path)
 }
 
 remove_blacklisted <- function(file_paths, blacklist, only_real_paths=FALSE) {
