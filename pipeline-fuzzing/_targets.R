@@ -5,6 +5,7 @@ library(future)
 library(future.callr)
 library(generatr)
 library(dplyr)
+library(withr)
 
 
 # TODO: move to utils
@@ -26,8 +27,8 @@ R_ENVIR <- c(
 TIMEOUT <- 5 * 60
 OUT_DIR <- Sys.getenv("OUT_DIR", "out")
 LIB_DIR <- Sys.getenv("LIB_DIR", file.path(OUT_DIR, "library"))
-DB_DIR <- Sys.getenv("DB_DIR", "/mnt/ocfs_vol_00/cran_db-3/")
-BUDGET <- 10e3
+DB_DIR <- Sys.getenv("DB_DIR", "/mnt/ocfs_vol_00/cran_db-5/")
+BUDGET <- 3000
 
 # packages to test
 CORPUS <- c("stringr")
@@ -97,57 +98,59 @@ list(
         }
     ),
     tar_target(
-        fuzz,
+        run_existing,
+        {
+            # TODO: can the code be somehow shared between
+            # run_existing / run_fuzz
+            # ideally using another pattern which will iterate over the
+            # different generators
+            value_db <- sxpdb::open_db(DB_DIR)
+            generator <- create_existing_args_generator(
+                functions_$pkg_name,
+                functions_$fun_name,
+                value_db,
+                origins_db
+            )
+            runner <- runner_start()
+            withr::defer(runner_stop(runner), envir = runner)
+            runner_fun <- create_fuzz_runner(DB_DIR, runner)
+
+            fuzz(
+                functions_$pkg_name,
+                functions_$fun_name,
+                generator = generator,
+                runner = runner_fun,
+                quiet = FALSE
+            )
+
+        },
+        pattern = map(functions_)
+    ),
+    tar_target(
+        run_fuzz,
         {
             value_db <- sxpdb::open_db(DB_DIR)
-            fun <- get(functions_$fun_name, envir = getNamespace(functions_$pkg_name), mode = "function")
-            generatr::feedback_directed_call_generator_all_db(
-                fn = fun,
+            generator <- create_fd_args_generator(
                 functions_$pkg_name,
                 functions_$fun_name,
                 value_db,
                 origins_db,
-                meta_db,
+                meta_db = NULL,
                 budget = BUDGET
             )
+            runner <- runner_start()
+            withr::defer(runner_stop(runner), envir = runner)
+            runner_fun <- create_fuzz_runner(DB_DIR, runner)
+
+            fuzz(
+                functions_$pkg_name,
+                functions_$fun_name,
+                generator = generator,
+                runner = runner_fun,
+                quiet = FALSE
+            )
         },
-        pattern = map(functions_)
+        pattern = map(functions_),
+        error = "continue"
     )
-    # tar_target(
-    #     programs_metadata,
-    #     {
-    #         output_dir <- file.path(programs_dir, packages$package)
-    #         sloc <- cloc(output_dir, by_file = TRUE, r_only = TRUE) %>%
-    #             select(file = filename, code)
-    #         res <- tibble(file = programs_files, package = packages$package, type = basename(dirname(file)))
-    #         left_join(res, sloc, by = "file")
-    #     },
-    #     pattern = map(packages)
-    # )
-    # tar_target(
-    #     programs_trace,
-    #     {
-    #         pkg_argtracer
-    #         tmp_db <- tempfile(fileext = ".sxpdb")
-    #         file <- normalizePath(programs_files_)
-    #         withr::defer(unlink(tmp_db, recursive = TRUE))
-    #         tryCatch(
-    #             callr::r(
-    #                 function(...) argtracer::trace_file(...),
-    #                 list(file, tmp_db),
-    #                 libpath = normalizePath(lib_dir),
-    #                 show = TRUE,
-    #                 wd = dirname(file),
-    #                 env = R_ENVIR,
-    #                 timeout = TIMEOUT
-    #             ),
-    #             error = function(e) {
-    #                 data.frame(status = -2, time = NA, file = file,
-    #                            db_path = NA, db_size = NA, error = e$message)
-    #             }
-    #         )
-    #     },
-    #     pattern = map(programs_files_)
-    # ),
-    # tar_render(report, "report.Rmd")
 )
