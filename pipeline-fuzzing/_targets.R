@@ -46,7 +46,7 @@ tar_option_set(
     workspace_on_error = TRUE
 )
 
-plan(callr)
+plan(multicore)
 
 print(OUT_DIR)
 print(LIB_DIR)
