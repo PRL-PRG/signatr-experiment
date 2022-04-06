@@ -19,3 +19,8 @@ xml2relational/examples/savetofiles.Rd.R
 xml2relational/examples/getInsertSQL.Rd.R
 NegBinBetaBinreg/examples/NegBinBetaBinreg.Rd.R
 rtrim/vignettes/rtrim_2_extensions.R
+cSEM/tests/testthat-drv-test-csem.R
+git2r/tests/bare_repository.R
+git2r/tests/commit.R
+gtable/vignettes/profiling.R
+matrixStats/tests/rowVarDiffs_var,sd_subset.R

@@ -17,7 +17,8 @@ r_envir = c(callr::rcmd_safe_env(),
             "R_COMPILE_PKGS"=0,
             "R_DISABLE_BYTECODE"=1) # that one is a 10x performance hit!
 
-plan(callr)
+#plan(callr)
+plan(multicore)
 
 # If you want to see the error messages, you can easily do it
 # by looking at the result of target"_err"
@@ -52,6 +53,7 @@ tar_option_set(
   packages = c("readr", "covr", "magrittr", "dplyr", "stringr"),
   #imports = c("sxpdb", "argtracer"),
   #error = "continue" # always continue by default
+  format = "qs"
 )
 
 list(
