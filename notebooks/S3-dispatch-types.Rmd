@@ -20,7 +20,28 @@ here::i_am("notebooks/S3-dispatch-types.Rmd")
 library(here)
 ```
 
-```{r}
+```{r load}
+meta <- read_csv("../pipeline-S3-dispatch/data/metadata_functions.csv")
+```
 
+We now get the methods:
+```{r}
+s3_methods <- meta %>% filter(is_s3_method)
+s3_methods
+```
+
+On what class do they perform?
+
+We extract the generic name and the class name in a rough way, because class names or generic names can themselves include `.`:
+
+```{r}
+s3_methods <- s3_methods %>% mutate(s3_res  = str_split_fixed(fun_name, pattern = fixed("."), n = 2), .after = fun_name, s3_generic = s3_res[,1], s3_class = s3_res[,2]) %>% select(-s3_res)
+```
+
+
+We can have a look at `+` :
+
+```{r}
+s3_methods %>% filter(s3_generic == "+")
 ```
 

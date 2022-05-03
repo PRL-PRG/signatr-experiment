@@ -3,12 +3,18 @@ library(tarchetypes)
 library(future)
 library(future.callr)
 library(progressr)
-source("R/functions.R")
+source("../pipeline-dbgen/R/functions.R")
 options(tidyverse.quiet = TRUE)
 options(future.wait.timeout = 15 * 60) # do not allow more than 15min for each task
 
 lib_path = normalizePath("../library", mustWork = TRUE)
 output_path = "data"
+r_envir = c(callr::rcmd_safe_env(),
+            "R_KEEP_PKG_SOURCE"=1,
+            "R_ENABLE_JIT"=0,
+            "R_COMPILE_PKGS"=0,
+            "R_DISABLE_BYTECODE"=1) # that one is a 10x performance hit!
+
 
 
 #plan(callr)
@@ -42,6 +48,7 @@ list(
     {
       library(packages_to_run, character.only = TRUE)
       runr::metadata_functions(packages_to_run)
-    }
+    },
+    pattern = map(packages_to_run)
   )
 )
