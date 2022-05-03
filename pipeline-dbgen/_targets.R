@@ -118,7 +118,8 @@ list(
   tar_target(
     traced_res,
     fix_traced_res(traced_results),
-    map(traced_results)
+    map(traced_results),
+    error = "continue"
   ),
   
   tar_target(

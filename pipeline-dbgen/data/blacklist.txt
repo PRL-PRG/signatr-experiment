@@ -24,3 +24,10 @@ git2r/tests/bare_repository.R
 git2r/tests/commit.R
 gtable/vignettes/profiling.R
 matrixStats/tests/rowVarDiffs_var,sd_subset.R
+glasso/examples/glasso.Rd.R
+glasso/examples/glassopath.Rd.R
+matrixStats/tests/rowOrderStats_subset.R
+quantreg/examples/rq.fit.sfn.Rd.R
+quantreg/examples/rq.fit.sfnc.Rd.R
+quantreg/tests/panel.R
+quantreg/tests/run-demos.R
