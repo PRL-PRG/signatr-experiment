@@ -27,21 +27,21 @@ R_ENVIR <- c(
 
 OUT_DIR <- Sys.getenv("OUT_DIR", "out")
 LIB_DIR <- Sys.getenv("LIB_DIR", file.path(OUT_DIR, "library"))
-DB_DIR <- Sys.getenv("DB_DIR", "/mnt/ocfs_vol_00/cran_db-5/")
-BUDGET <- 3000
+DB_DIR <- Sys.getenv("DB_DIR", "/mnt/ocfs_vol_00/cran_db-6/")
+BUDGET <- 5000
 # maximum time allowed for a function call
 TIMEOUT_MS <- 60 * 1000
 
 # packages to test
 # CORPUS <- c("stringr", "dplyr")
 CORPUS <-
-    readLines("/mnt/ocfs_vol_00/signatr/packages-42.txt") %>%
+    readLines("../pipeline-dbgen/data/packages-typer-400.txt") %>%
     trimws(which = "both") %>%
     unique()
 
 tar_option_set(
     # we want to keep this as small as possible to cut the workers startup time
-    packages = c("magrittr"),
+    packages = c("magrittr", "targets"),
     format = "qs",
     workspace_on_error = TRUE
 )
@@ -54,6 +54,7 @@ print(DB_DIR)
 
 lib_dir <- create_dir(LIB_DIR)
 full_lib_dir <- c(LIB_DIR, .libPaths())
+run_fuzz_base_rdb_path <- file.path(OUT_DIR, "fuzz-base-rdb")
 
 list(
     tar_target(
@@ -175,9 +176,9 @@ list(
             pkg_name <- origins_db_pkg_fun$pkg[1]
             fun_name <- origins_db_pkg_fun$fun[1]
             do_fuzz(
-                pkg_name = pkg_name, 
-                fun_name = fun_name, 
-                db_path = DB_DIR, 
+                pkg_name = pkg_name,
+                fun_name = fun_name,
+                db_path = DB_DIR,
                 origins_db = origins_db_pkg_fun,
                 lib_loc = full_lib_dir,
                 budget_runs = BUDGET,
@@ -187,6 +188,49 @@ list(
             )
         },
         pattern = map(origins_db_pkg_fun),
+        error = "continue"
+    ),
+    tar_target(
+        base_functions,
+        tribble(
+            ~pkg_name, ~fun_name,
+            "base", "grep",
+            "basewrap", "wrap_length",
+            "basewrap", "wrap_sin",
+            "basewrap", "wrap_+",
+            "basewrap", "wrap_-",
+            "basewrap", "wrap_*",
+            "basewrap", "wrap_/",
+            "basewrap", "wrap_^",
+            "basewrap", "wrap_unary_+",
+            "basewrap", "wrap_unary_-",
+            "basewrap", "wrap_%/%",
+            "basewrap", "wrap_%%"
+        )
+    ),
+    tar_target(
+        run_fuzz_base,
+        {
+            rdb_path <- file.path(
+                run_fuzz_base_rdb_path,
+                base_functions$pkg_name,
+                gsub("/", "div", base_functions$fun_name)
+            )
+
+            do_fuzz(
+                pkg_name = base_functions$pkg_name,
+                fun_name = base_functions$fun_name,
+                db_path = DB_DIR,
+                origins_db = tibble(id=integer(0), pkg=character(0), fun=character(0), param=character(0)),
+                lib_loc = full_lib_dir,
+                rdb_path = rdb_path,
+                budget_runs = 200,
+                budget_time_s = 60 * 60,
+                timeout_one_call_ms = 60 * 1000,
+                quiet = FALSE
+            )
+        },
+        pattern = map(base_functions),
         error = "continue"
     )
 )

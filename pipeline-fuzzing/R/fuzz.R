@@ -1,5 +1,5 @@
 do_fuzz <- function(pkg_name, fun_name,
-                    db_path, origins_db, lib_loc,
+                    db_path, origins_db, lib_loc, rdb_path,
                     budget_runs, budget_time_s, timeout_one_call_ms,
                     quiet) {
 
@@ -17,11 +17,19 @@ do_fuzz <- function(pkg_name, fun_name,
     withr::defer(generatr::runner_stop(runner), envir = runner)
     runner_fun <- generatr::create_fuzz_runner(db_path, runner, timeout_ms = timeout_one_call_ms)
 
+    if (!dir.exists(dirname(rdb_path))) {
+        dir.create(dirname(rdb_path))
+    }
+    rdb <- sxpdb::open_db(rdb_path, mode = TRUE)
+    on.exit(sxpdb::close_db(rdb))
+    processor <- generatr::store_result(rdb)
+
     generatr::fuzz(
         pkg_name,
         fun_name,
         generator = generator,
         runner = runner_fun,
+        result_processor = processor,
         quiet = quiet,
         timeout_s = budget_time_s
     ) %>%
