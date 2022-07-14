@@ -101,10 +101,12 @@ po/*~
 /runr/
 /sxpdb/
 /tastr/
+/bison-3.5.4/
+/DB/
 
-
-/R-4.0.2
-/R-4.0.2-dbg
+/R-4.0.2/
 /pipeline-dbgen/data/sxpdb
 /pipeline-dbgen/_targets
 /pipeline-dbgen/data/extracted-code
+
+.gdb_history

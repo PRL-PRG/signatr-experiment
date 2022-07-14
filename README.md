@@ -65,6 +65,8 @@ cd signatr-experiment
     make -C tastr build
     ```
 
+    Note that tastr needs [bison-3.5.4](https://ftp.gnu.org/gnu/bison/bison-3.5.4.tar.gz).
+
 - Install injectr
 
     ```
