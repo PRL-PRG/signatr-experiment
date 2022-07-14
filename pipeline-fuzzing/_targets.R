@@ -54,7 +54,11 @@ print(DB_DIR)
 
 lib_dir <- create_dir(LIB_DIR)
 full_lib_dir <- c(LIB_DIR, .libPaths())
-run_fuzz_base_rdb_path <- next_file(file.path(OUT_DIR, "fuzz-base-rdb-"))
+run_fuzz_rdb_path <- file.path(OUT_DIR, "fuzz-rdb")
+run_fuzz_base_rdb_path <- file.path(OUT_DIR, "fuzz-base-rdb")
+
+print(run_fuzz_rdb_path)
+print(run_fuzz_base_rdb_path)
 
 list(
     tar_target(
@@ -175,12 +179,19 @@ list(
         {
             pkg_name <- origins_db_pkg_fun$pkg[1]
             fun_name <- origins_db_pkg_fun$fun[1]
+
+            rdb_path <- file.path(
+                run_fuzz_rdb_path,
+                paste0(pkg_name, "::", fun_name)
+            )
+
             do_fuzz(
                 pkg_name = pkg_name,
                 fun_name = fun_name,
                 db_path = DB_DIR,
                 origins_db = origins_db_pkg_fun,
                 lib_loc = full_lib_dir,
+                rdb_path = rdb_path,
                 budget_runs = BUDGET,
                 budget_time_s = 60 * 60,
                 timeout_one_call_ms = 60 * 1000,
@@ -223,7 +234,7 @@ list(
                 origins_db = tibble(id=integer(0), pkg=character(0), fun=character(0), param=character(0)),
                 lib_loc = full_lib_dir,
                 rdb_path = rdb_path,
-                budget_runs = 10,
+                budget_runs = 100000,
                 budget_time_s = 60 * 60,
                 timeout_one_call_ms = 60 * 1000,
                 quiet = FALSE
