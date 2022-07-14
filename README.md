@@ -27,11 +27,18 @@ cd signatr-experiment
 - Install R-dyntrace
 
     ```sh
-    git clone -b r-4.0.2 git@github.com:PRL-PRG/R-dyntrace
+    git clone -b r-4.0.2-signatr git@github.com:fikovnik/R-dyntrace
     cd R-dyntrace
     ./build
     ```
 
+- Install R-dyntrace
+
+    ```sh
+    git clone -b r-4.0.2-signatr git@github.com:fikovnik/R-dyntrace R-dyntrace-dbg
+    cd R-dyntrace-dbg
+    ../build-R-dyntrace-dbg
+    ```
 - Clone runr
 
     ```
