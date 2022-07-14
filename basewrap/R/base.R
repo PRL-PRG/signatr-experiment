@@ -14,7 +14,7 @@
 `wrap_*` <- function(x, y) x * y
 
 #' @export
-`wrap_/` <- function(x, y) x / y
+`wrap_div` <- function(x, y) x / y
 
 #' @export
 `wrap_^` <- function(x, y) x ^ y
@@ -23,7 +23,7 @@
 `wrap_%%` <- function(x, y) x %% y
 
 #' @export
-`wrap_%/%` <- function(x, y) x %/% y
+`wrap_%div%` <- function(x, y) x %/% y
 
 #' @export
 wrap_length <- function(x) length(x)

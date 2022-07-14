@@ -1,3 +1,16 @@
+next_file <- function(dir, name) {
+    files <- grep(paste0("^", name, "\\d*"), list.files(dir, full.names = TRUE), value = TRUE)
+    n <- length(files)
+    repeat {
+        n <- n + 1
+        file <- paste0(name, n)
+        if (!file.exists(file)) {
+            return(file)
+        }
+    }
+}
+
+
 do_fuzz <- function(pkg_name, fun_name,
                     db_path, origins_db, lib_loc, rdb_path,
                     budget_runs, budget_time_s, timeout_one_call_ms,
@@ -33,5 +46,8 @@ do_fuzz <- function(pkg_name, fun_name,
         quiet = quiet,
         timeout_s = budget_time_s
     ) %>%
-        dplyr::mutate(pkg_name = pkg_name, fun_name = fun_name)
+        dplyr::mutate(
+            fun_name = paste0(pkg_name, "::", fun_name),
+            rdb_path = rdb_path
+        )
 }
