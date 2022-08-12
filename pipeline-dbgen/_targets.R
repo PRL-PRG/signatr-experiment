@@ -17,7 +17,8 @@ r_envir = c(callr::rcmd_safe_env(),
             "R_COMPILE_PKGS"=0,
             "R_DISABLE_BYTECODE"=1) # that one is a 10x performance hit!
 
-plan(callr)
+#plan(callr)
+plan(multicore) # seems to be much better than callr
 
 # If you want to see the error messages, you can easily do it
 # by looking at the result of target"_err"
@@ -52,6 +53,7 @@ tar_option_set(
   packages = c("readr", "covr", "magrittr", "dplyr", "stringr"),
   #imports = c("sxpdb", "argtracer"),
   #error = "continue" # always continue by default
+  format = "qs"
 )
 
 list(
@@ -70,14 +72,14 @@ list(
     deployment = "main",
     cue = tar_cue(mode = "always")
   ),
-  
+
   tar_target(
     extracted_files,
     extract_code_from_package(packages_to_run, lib_path, extracted_output),
     format = "file",
     pattern = map(packages_to_run)
   ),
-  
+
   tar_target(
     blacklist_file,
     "data/blacklist.txt",
@@ -87,12 +89,12 @@ list(
     blacklist,
     unique(trimws(read_lines(blacklist_file)))
   ),
-  
+
   tar_target(
     individual_files,
     remove_blacklisted(extracted_files, blacklist),
   ),
-  
+
   tar_target(
     traced_results,
     trace_file(individual_files, lib_path, sxpdb_output),
@@ -102,7 +104,7 @@ list(
     error = "continue",
     priority = 1
   ),
-  
+
   tar_target(
     db_blacklist_file,
     "data/db-blacklist.txt",
@@ -112,27 +114,27 @@ list(
     db_blacklist,
     unique(trimws(read_lines(db_blacklist_file)))
   ),
-  
+
   tar_target(
     traced_res,
     fix_traced_res(traced_results),
     map(traced_results)
   ),
-  
+
   tar_target(
     db_paths,
     remove_blacklisted(traced_res$db_path, db_blacklist, only_real_paths=TRUE),
     format = "file"
   ),
-  
-  
+
+
   #tar_target(
   #  run_results2,
   #  run_file2(individual_files, lib_path, r_home = "R-4.0.2"),
   #  pattern = map(individual_files),
   #  cue = tar_cue(mode = "never")
   #),
-  
+
   tar_target(
     merged_db,
     with_progress(
