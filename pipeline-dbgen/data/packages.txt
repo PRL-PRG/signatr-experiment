@@ -1,5 +1,4 @@
-ggplot2
-dplyr
 stringr
-glue
-data.table
+dplyr
+tab
+ggplot2

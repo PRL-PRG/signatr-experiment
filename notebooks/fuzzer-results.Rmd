@@ -1,0 +1,186 @@
+---
+title: "fuzzer-results"
+author: "Pierre Donat-Bouillud"
+date: "3/24/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, root.dir = normalizePath(".."))
+
+library(dplyr)
+library(readr)
+library(tidyr)
+library(ggplot2)
+library(fst)
+library(DT)
+library(stringr)
+
+here::i_am("notebooks/merge-performance.Rmd")
+library(here)
+```
+
+## Loading data
+
+```{r}
+sig_baseline <- as_tibble(read_fst("/mnt/ocfs_vol_00/signatr/run_existing-5.fst"))
+sig_fuzz <- as_tibble(read_fst("/mnt/ocfs_vol_00/signatr/run_fuzz-5.fst"))
+```
+
+# First look
+
+```{r}
+n_sig_baseline <- sig_baseline %>% filter(is.na(warnings), !is.na(signature)) %>% pull(signature) %>% n_distinct()
+n_sig_fuzz <- sig_fuzz %>% filter(is.na(warnings), !is.na(signature)) %>% pull(signature) %>% n_distinct()
+```
+
+There are `r n_sig_baseline` distinct signatures of calls without warnings for the baseline, and `r n_sig_fuzz` for the fuzzed calls.
+
+## Per function
+
+```{r}
+sig_base_func <- sig_baseline %>% filter(!is.na(signature)) %>%  group_by(pkg_name, fun_name) %>% summarize(n_sigs = n_distinct(signature))
+sig_fuzz_func <- sig_fuzz %>% filter(!is.na(signature)) %>%  group_by(pkg_name, fun_name) %>% summarize(n_sigs = n_distinct(signature))
+
+n_sig_diff <- left_join(sig_base_func, sig_fuzz_func, by = c("pkg_name", "fun_name"), suffix=c("_base", "_fuzz"))
+```
+
+
+Functions for which fuzzing finds less signatures:
+```{r}
+n_sig_diff %>% filter(n_sigs_base > n_sigs_fuzz)
+```
+
+Functions for which it finds more:
+
+```{r}
+more_sigs <- n_sig_diff %>% filter(n_sigs_base < n_sigs_fuzz)
+more_sigs %>% mutate(ratio = n_sigs_fuzz / n_sigs_base) %>% ungroup() %>% summarise(me = mean(ratio), med = median(ratio), sd = sd(ratio) )
+```
+
+## What is a high quality type signature?
+
+If there is an error or a crash, we do not get a type signature.
+
+But what about warnings? And messages? Can we classify them?
+
+### Warnings
+
+```{r warnings}
+sig_warnings <- sig_fuzz %>% filter(!is.na(warnings)) %>% mutate(warns = str_split(warnings, fixed(";"))) %>%  summarize( warnings_c = do.call(c, warns)) %>% count(warnings_c, sort = TRUE)  %>% mutate(pc = 100 * n / sum(n), cpc = cumsum(pc))
+sig_warnings
+```
+
+We can try some heuristics: coercion messages will have the form of _coercing_ or _should be_, or indication that `NA` or `NaN` were produced.
+
+1. Should be
+
+```{r}
+should_be <- sig_warnings %>% extract(warnings_c, into = c("arg_name", "type"), "argument `([^`]+)` should be (.*)") %>% filter(!is.na(arg_name) | !is.na(type))
+should_be
+```
+
+2. _is.na() applied to non-(list or vector) of type_
+
+```{r}
+is_na_type <- sig_warnings %>% extract(warnings_c, into = c("given_type"), "is.na\\(\\) applied to non-\\(list or vector\\) of type (.*)") %>% filter(!is.na(given_type))
+is_na_type
+```
+
+3. Coercing
+
+```{r}
+coercing_to <- sig_warnings %>% extract(warnings_c, into = c("arg_name", "coercing_type"), "Coercing `([^`])*` to (.*)") %>% filter(!is.na(coercing_type))
+coercing_to
+```
+
+
+```{r}
+sig_warnings %>% filter(str_detect(warnings_c, "(C|c)oerci(ng|on)"))
+```
+
+_longer argument not a multiple of length of shorter_; _data length [5] is not a sub-multiple or multiple of the number of rows [2]_ : this error message suggests a numeric relation between two arguments.
+
+### Messages
+
+```{r messages}
+sig_fuzz %>% filter(!is.na(messages)) %>% count(messages, sort = TRUE) 
+```
+
+Most of them are about loading a library. We can ignore them.
+
+# Feedback
+
+In addition to warnings, we can also use the errors.
+
+```{r errors}
+sig_errors <- sig_fuzz %>% filter(!is.na(error)) %>% mutate(errs = str_split(error, fixed(";"))) %>%  summarize( errors_c = do.call(c, errs)) %>% count(errors_c, sort = TRUE)  %>% mutate(pc = 100 * n / sum(n), cpc = cumsum(pc)) 
+sig_errors
+```
+
+1. _must be_
+
+```{r}
+must_be <- sig_errors %>% extract(errors_c, into = c("arg_name", "type"), "`([^`])*` must be (.*)") %>% filter(!is.na(type))
+must_be
+```
+
+And if it is an enumeration of types?
+
+```{r}
+# actually only the 1st two and it will not correctly detect types with spaces inside
+all_types <- must_be %>% pull(type) %>% str_match("(?:either )?a ([:alnum:]*)(?: or a ([:alnum:]*))?")
+all_types[apply(all_types, 1, function(row) { !is.na(row[2])}),]
+```
+
+
+We can further extract the multiple option _one of_:
+
+```{r}
+must_be %>% extract(type, into = "options", "one of (.*)") %>% filter(!is.na(options))
+# TODO: extract all the possible options there
+```
+
+
+2. _cannot be coerced to_
+
+```{r}
+sig_errors %>% filter(str_detect(errors_c, fixed("cannot be coerced")))
+```
+
+
+3. _stopifnot errors_
+
+```{r}
+sig_errors %>% filter(str_detect(errors_c, fixed("is not TRUE")))
+```
+
+
+Then we can detect the presence of type checking functions, such as `is.integer` and so on...
+
+
+## Return metadata
+
+
+## Type stability
+
+Does the return type of the function change often? How?
+
+```{r}
+get_return_type <- function(sig) {
+  str_match(sig, ".* -> (.*)")[,2]
+}
+
+sig_fuzz_ret <- sig_fuzz %>% mutate(ret_type = get_return_type(signature))
+```
+
+
+```{r}
+sig_fuzz_ret %>% filter(!is.na(signature)) %>% group_by(pkg_name, fun_name) %>% summarize(n_return_types = n_distinct(ret_type), ret_types = paste0(unique(ret_type), collapse = "; "))  %>% filter(n_return_types > 1)
+```
+What are the functions which have several return types but one that is seldom used?
+
+```{r}
+sig_fuzz_ret %>% filter(!is.na(signature)) %>% group_by(pkg_name, fun_name) %>% count(ret_type) %>% mutate(n_return_types = n_distinct(ret_type)) %>% arrange(desc(n_return_types))  %>% filter(n_return_types > 1, n_return_types < 10, any(n == 1), any(n > 1)) 
+```
+

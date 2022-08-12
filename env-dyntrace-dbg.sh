@@ -1,4 +1,4 @@
-R_BIN=$(readlink -e R-dyntrace-gdb/bin)
+R_BIN=$(readlink -e R-dyntrace-ddb/bin)
 
 export PATH=$R_BIN:$PATH
 export R_LIBS=$(readlink -m library)

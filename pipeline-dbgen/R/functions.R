@@ -231,7 +231,7 @@ merge_db2 <- function(db_paths, output_path) {
 }
 
 merge_db <- function(db_paths, output_path) {
-    sxpdb::merge_all_dbs(db_paths, output_path)
+    sxpdb::merge_all_dbs(db_paths, output_path, FALSE)
 }
 
 remove_blacklisted <- function(file_paths, blacklist, only_real_paths=FALSE) {

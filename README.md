@@ -27,11 +27,18 @@ cd signatr-experiment
 - Install R-dyntrace
 
     ```sh
-    git clone -b r-4.0.2 git@github.com:PRL-PRG/R-dyntrace
+    git clone -b r-4.0.2-signatr git@github.com:fikovnik/R-dyntrace
     cd R-dyntrace
     ./build
     ```
 
+- Install R-dyntrace
+
+    ```sh
+    git clone -b r-4.0.2-signatr git@github.com:fikovnik/R-dyntrace R-dyntrace-dbg
+    cd R-dyntrace-dbg
+    ../build-R-dyntrace-dbg
+    ```
 - Clone runr
 
     ```
@@ -57,6 +64,8 @@ cd signatr-experiment
     git clone git@github.com:PRL-PRG/tastr
     make -C tastr build
     ```
+
+    Note that tastr needs [bison-3.5.4](https://ftp.gnu.org/gnu/bison/bison-3.5.4.tar.gz).
 
 - Install injectr
 

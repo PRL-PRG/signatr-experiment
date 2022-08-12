@@ -1,0 +1,60 @@
+---
+title: "Unification of types"
+author: "Pierre Donat-Bouillud"
+date: '2022-04-28'
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, root.dir = normalizePath(".."))
+
+library(dplyr)
+library(readr)
+library(tidyr)
+library(ggplot2)
+library(fst)
+library(DT)
+library(stringr)
+
+here::i_am("notebooks/merge-performance.Rmd")
+library(here)
+
+source("generate-type-system.R")
+```
+
+# Loading data 
+
+```{r load}
+sigs <- read_fst("/mnt/ocfs_vol_00/signatr/filip/S.fst") %>% as_tibble()
+```
+
+# Per function
+
+```{r}
+sigs_func <- sigs %>% group_by(pkg_name, fun_name) %>% summarize(n_sigs = n_distinct(signature))
+```
+
+```{r}
+sigs %>% group_by(pkg_name, fun_name) %>% select(-cp) %>% arrange(.by_group = TRUE)
+```
+
+And for the functions with a small number of signatures:
+
+
+```{r}
+sigs_func %>% filter(n_sigs > 1, n_sigs < 15) %>% left_join(sigs) %>% select(-cp, -n_sigs) %>% arrange(.by_group = TRUE)
+```
+
+
+# Unify all those signatures
+
+```{r}
+unified_sigs <- sigs %>% group_by(pkg_name, fun_name)   %>% summarize(psigs = list(map(as.list(signature), parse_signature))) %>% ungroup() %>% mutate(sig = map(psigs, function(l) consolidate_types(l, STRAT = "HYBRID")))
+```
+
+Now, we can compute the normalized complexity: the number of atomic types divided by the number of arguments and the return value.
+
+```{r}
+unified_sigs %>% mutate(complexity = map_dbl(sig, sig_complexity)) %>% select(-psigs, sig)
+```
+

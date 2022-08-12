@@ -1,0 +1,71 @@
+---
+title: "Merging performance"
+author: "Pierre Donat-Bouillud"
+date: "08/02/2022"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE, root.dir = normalizePath(".."))
+
+library(dplyr)
+library(readr)
+library(ggplot2)
+library(modelr)
+
+here::i_am("notebooks/merge-performance.Rmd")
+library(here)
+```
+
+This notebook aims at exploring the performance of merging.
+
+We first laod some data resulting from a run on packages ggplot2, dplyr and stringr.
+
+```{r load}
+scalar_merge <- read_csv(here("data", "scalar_merge.csv"))
+parallel_merge <- read_csv(here("data", "parallel_merge.csv"))
+```
+
+```{r}
+dbs <- parallel_merge %>% left_join(scalar_merge, by = "path") %>% 
+  mutate(dur_diff = duration.y - duration.x)
+```
+
+
+```{r sanity_checks}
+filter(dbs, db_size_before.x != db_size_before.y)
+filter(dbs, added_values.x != added_values.y)
+```
+
+## Interactions between some components
+
+```{r db_size_scalar}
+scalar_merge %>% ggplot(aes(x = small_db_size, y = duration, colour = small_db_bytes, alpha = 0.7, size = added_values)) + geom_point()
+```
+
+```{r db_bytes_scalar}
+scalar_merge %>% ggplot(aes(x = small_db_bytes, y = duration, colour = small_db_size, alpha = 0.7, size = added_values)) + geom_point()
+```
+
+```{r db_size_parallel}
+parallel_merge %>% ggplot(aes(x = small_db_size, y = duration, colour = small_db_bytes, alpha = 0.7, size = added_values)) + geom_point()
+```
+
+```{r db_bytes_parallel}
+parallel_merge %>% ggplot(aes(x = small_db_bytes, y = duration, colour = small_db_size, alpha = 0.7, size = added_values)) + geom_point()
+```
+
+We can refine on the smaller sizes, to realize that the number of values also has an impact:
+
+```{r db_bytes_parallel_size}
+parallel_merge %>% filter(small_db_bytes < 5e8) %>% ggplot(aes(x = small_db_bytes, y = duration, colour = small_db_size, alpha = 0.7, size = added_values)) + geom_point() 
+```
+
+
+## Comparing merging times
+
+
+```{r comparing}
+dbs %>% filter(small_db_bytes.x < 5e8) %>% ggplot(aes(x = small_db_bytes.x, y = dur_diff, colour = db_size_before.x, size = added_values.x, alpha = 0.5)) + geom_point()
+```
+
