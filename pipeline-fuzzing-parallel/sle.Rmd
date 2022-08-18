@@ -1,0 +1,209 @@
+---
+title: "SLE'22"
+output: html_document
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(pbapply)
+library(ggplot2)
+library(signatr)
+library(tidyverse)
+library(qs)
+library(DT)
+library(purrr)
+
+source("latextags.R")
+```
+
+## Load traces
+
+```{r}
+all_traces_raw <- traces_load("data/all-traces.qs")
+all_traces_stats <- traces_stats(all_traces_raw) %>%
+  mutate(pkg=str_replace(fun_name, "(.*)::.*", "\\1")) %>%
+  anti_join(tibble(pkg=c("ADGofTest","brew","classInt","corrplot","DEoptim","docopt")))
+
+all_traces <- semi_join(all_traces_raw, all_traces_stats, by="fun_name")
+all_traces_stats <- traces_stats(all_traces) 
+
+all_traces_stats_summary <- summary(all_traces_stats)
+
+fuzz_error_messages <- count(filter(all_traces, !is.na(error)), error)
+```
+
+```{r}
+traces <- filter(all_traces, status == 0)
+traces_stats <- traces_stats(traces)
+traces_stats_summary <- summary(traces_stats)
+```
+
+
+```
+x <- mutate(all_traces_stats, pkg=str_replace(fun_name, "(.*)::.*", "\\1")) %>% group_by(pkg) %>% 
+  summarise(funs=n(), succ=sum(success > 0), ratio=succ/funs) %>% 
+  arrange(ratio) %>%
+  mutate(cs=cumsum(ratio))
+```
+
+
+## Fuzzing experiment
+
+Fix the output from parallel:
+
+```
+cat data/run-corpus-2.csv| rg -v '^\d+ ' | rg -v '^\s+' | rg -v '^$' | rg -v '^Warning:' | rg -v '^by .GlobalEnv' | rg -v '^trace' | rg -v '^}' >! data/run-corpus-2-processed.csv
+```
+
+```{r}
+run1 <- read_csv(
+  "data/run-corpus-1-processed.csv", 
+  col_types = cols(
+    Seq = col_integer(),
+    Host = col_character(),
+    Starttime = col_double(),
+    JobRuntime = col_double(),
+    Send = col_double(),
+    Receive = col_double(),
+    Exitval = col_integer(),
+    Signal = col_integer(),
+    Command = col_character(),
+    V1 = col_character(),
+    V2 = col_character(),
+    Stdout = col_character(),
+    Stderr = col_character()
+  )
+) %>%
+  semi_join(all_traces_stats, by=c("V1"="pkg"))
+
+run2 <- read_csv(
+  "data/run-corpus-2-processed.csv", 
+  col_types = cols(
+    Seq = col_integer(),
+    Host = col_character(),
+    Starttime = col_double(),
+    JobRuntime = col_double(),
+    Send = col_double(),
+    Receive = col_double(),
+    Exitval = col_integer(),
+    Signal = col_integer(),
+    Command = col_character(),
+    V1 = col_character(),
+    V2 = col_character(),
+    Stdout = col_character(),
+    Stderr = col_character()
+  )
+) %>%
+  semi_join(all_traces_stats, by=c("V1"="pkg"))
+
+run <- bind_rows(run1, run2)
+```
+
+
+```{r}
+run1_duration <- lubridate::duration(max(run1$Starttime+run1$JobRuntime) - min(run1$Starttime))
+run2_duration <- lubridate::duration(max(run2$Starttime+run2$JobRuntime) - min(run2$Starttime))
+run_duration <- run1_duration + run2_duration
+```
+
+
+```{r}
+overview_table(
+  r("Tracing budget", 5000),
+  r("Tracing time", run_duration),
+  r("Num traces", all_traces),
+  r("Num success traces", traces),
+  r("Ratio sucesss traces", ratio(traces, all_traces)),
+  r("Num packages", all_traces_stats_summary$num_pkgs),
+  r("Num functions", all_traces_stats_summary$num_funs),
+  r("Num success packages", traces_stats_summary$num_pkgs),
+  r("Num success functions", traces_stats_summary$num_funs),
+  r("Ration success functions", ratio(traces_stats_summary$num_funs, all_traces_stats_summary$num_funs)),
+  r("Num crashed R sessions", filter(all_traces, status >= 2)),
+)
+```
+
+## Baseline Types
+
+```{r}
+FILE_BASELINE_TYPES <- "data/preprocessed/baseline-types.qs"
+
+if (file.exists(FILE_BASELINE_TYPES)) {
+  baseline_types <- qs::qread(FILE_BASELINE_TYPES)
+} else {
+  baseline_types_raw <- 
+    unlist(pblapply(list.files("data/baseline-types", pattern = "\\.R$", full.names = TRUE, recursive = FALSE), qs::qread), recursive = FALSE) %>%
+    pblapply(function(x) select(x, fun_name, signature))
+  
+  baseline_types <- pblapply(
+    names(baseline_types_raw), 
+    function(x) bind_rows(baseline_types_raw[names(baseline_types_raw) == x])
+  ) %>% bind_rows()
+  
+  baseline_types <- semi_join(baseline_types, all_traces_stats, by="fun_name") %>% distinct(fun_name, signature)
+  qs::qsave(baseline_types, FILE_BASELINE_TYPES)
+}
+```
+
+## Signatr Types
+
+```{r}
+FILE_FUZZ_TYPES <- "data/preprocessed/fuzz-types.qs"
+
+if (file.exists(FILE_FUZZ_TYPES)) {
+  fuzz_types <- qs::qread(FILE_FUZZ_TYPES)
+} else {
+  fuzz_types_raw <- 
+    unlist(pblapply(list.files("data/types", pattern = ".*::.*", full.names = TRUE, recursive = FALSE), qs::qread), recursive = FALSE) %>%
+    pblapply(function(x) select(x, fun_name, signature))
+  
+  fuzz_types <- pblapply(
+    names(fuzz_types_raw), 
+    function(x) bind_rows(fuzz_types_raw[names(fuzz_types_raw) == x])
+  ) %>% bind_rows()
+  
+  fuzz_types <- semi_join(fuzz_types, all_traces_stats, by="fun_name") %>% distinct(fun_name, signature)
+  qs::qsave(fuzz_types, FILE_FUZZ_TYPES)
+}
+```
+
+TODO: what are the functions for which we have successfull calls but no signatures? Why?
+The problem is that the rdb is not saved
+
+```{r}
+signatures <- 
+  select(all_traces_stats, fun_name) %>%
+  left_join(mutate(fuzz_types, fuzz=TRUE), by="fun_name") %>%
+  full_join(mutate(baseline_types, baseline=TRUE), by=c("fun_name", "signature")) %>%
+  filter(!is.na(signature))
+
+signatures_summary <-
+  group_by(signatures, fun_name) %>%
+  summarise(
+    all=n(),
+    shared=sum(!is.na(fuzz) & !is.na(baseline)),
+    only_fuzz=sum(!is.na(fuzz) & is.na(baseline)),
+    only_baseline=sum(!is.na(baseline) & is.na(fuzz))
+  )
+```
+
+```{r}
+overview_table(
+  r("Num functions signatr signatrue", count(fuzz_types, fun_name)),
+  r("Signatr signatures", fuzz_types),
+  r("All signatures", sum(signatures_summary$all)),
+  r("Shared signatures", sum(signatures_summary$shared)),
+  r("Only Baseline signatures", sum(signatures_summary$only_baseline)),
+  r("Only Signatr signatures", sum(signatures_summary$only_fuzz)),
+  r("Signatr baseline signatures ratio", sum(signatures_summary$only_fuzz)/sum(signatures_summary$only_baseline)),
+  r("Num functions signatr to baseline signature ratio", ratio(count(fuzz_types, fun_name), count(baseline_types, fun_name))),
+  r("Num functions signatr to corpus signature ratio", ratio(count(fuzz_types, fun_name), all_traces_stats))
+)
+```
+
+## Type traces
+
+## Plots
