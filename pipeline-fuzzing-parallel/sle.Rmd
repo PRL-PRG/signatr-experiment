@@ -19,6 +19,11 @@ library(purrr)
 source("latextags.R")
 ```
 
+```{r}
+create_tags(path(TAGS_DIR, "experiment-uf.tex"), prefix = "", default = TRUE)
+```
+
+
 ## Load traces
 
 ```{r}
@@ -28,7 +33,11 @@ all_traces_stats <- traces_stats(all_traces_raw) %>%
   anti_join(tibble(pkg=c("ADGofTest","brew","classInt","corrplot","DEoptim","docopt")))
 
 all_traces <- semi_join(all_traces_raw, all_traces_stats, by="fun_name")
-all_traces_stats <- traces_stats(all_traces) 
+all_traces_stats <- traces_stats(all_traces)  %>%
+  mutate(
+    pkg=str_replace(fun_name, "(.*)::.*", "\\1"),
+    fun=str_replace(fun_name, ".*::(.*)", "\\1")
+  )
 
 all_traces_stats_summary <- summary(all_traces_stats)
 
@@ -123,6 +132,7 @@ overview_table(
   r("Num success functions", traces_stats_summary$num_funs),
   r("Ration success functions", ratio(traces_stats_summary$num_funs, all_traces_stats_summary$num_funs)),
   r("Num crashed R sessions", filter(all_traces, status >= 2)),
+  r("Num error messages", fuzz_error_messages)
 )
 ```
 
@@ -204,6 +214,120 @@ overview_table(
 )
 ```
 
-## Type traces
+## Coverage
+
+### Baseline
+
+```{r}
+extracted_code_files <- 
+  pblapply(
+    unique(all_traces_stats$pkg),
+    function(x) {
+      tibble(pkg=x, file=list.files(file.path("../data/extracted-code", pkg), recursive = TRUE, include.dirs = FALSE, pattern = "\\.R$"))
+    }
+  ) %>%
+  bind_rows %>%
+  left_join(select(all_traces_stats, pkg, fun_name), by="pkg") %>%
+  mutate(input=str_c(fun_name, "-", basename(file))) %>%
+  select(-fun_name)
+```
+
+```{r}
+FILE_BASELINE_COVERAGE <- "data/preprocessed/baseline-coverage.qs"
+FILE_BASELINE_COVERAGE_RAW <- "data/preprocessed/baseline-coverage-raw.qs"
+
+if (file.exists(FILE_BASELINE_COVERAGE_RAW)) {
+  baseline_coverage_raw <- qs::qread(FILE_BASELINE_COVERAGE_RAW)
+} else {
+  baseline_coverage_raw <- 
+    bind_rows(pblapply(list.files("data/baseline-coverage", pattern = "\\.coverage$", full.names = TRUE, recursive = FALSE), qs::qread)) %>%
+    semi_join(all_traces_stats, by="fun_name") %>%
+    mutate(input=str_c(fun_name, "-", tools::file_path_sans_ext(basename(input)))) %>%
+    left_join(select(extracted_code_files, -file), by="input") %>%
+    filter(!is.na(pkg))
+  
+  qs::qsave(baseline_coverage_raw, FILE_BASELINE_COVERAGE_RAW)
+}
+
+if (file.exists(FILE_BASELINE_COVERAGE)) {
+  baseline_coverage <- qs::qread(FILE_BASELINE_COVERAGE)
+} else {
+  baseline_coverage <-
+    baseline_coverage_raw %>%
+    group_by(pkg, fun_name) %>% summarise(lines=n(), hit=sum(value > 0), coverage=hit/lines) %>%
+    select(fun_name, coverage)
+    
+  qs::qsave(baseline_coverage, FILE_BASELINE_COVERAGE)
+}
+```
+
+### Fuzz
+
+```{r}
+FILE_FUZZ_COVERAGE <- "data/preprocessed/fuzz-coverage.qs"
+FILE_FUZZ_COVERAGE_RAW <- "data/preprocessed/fuzz-coverage-raw.qs"
+
+if (file.exists(FILE_FUZZ_COVERAGE_RAW)) {
+  fuzz_coverage_raw <- qs::qread(FILE_FUZZ_COVERAGE_RAW)
+} else {
+  fuzz_coverage_raw <- 
+    bind_rows(pblapply(list.files("data/fuzz-coverage", pattern = "\\.coverage$", full.names = TRUE, recursive = FALSE), qs::qread))
+  
+  qs::qsave(fuzz_coverage_raw, FILE_FUZZ_COVERAGE_RAW)
+}
+
+if (file.exists(FILE_FUZZ_COVERAGE)) {
+  fuzz_coverage <- qs::qread(FILE_FUZZ_COVERAGE)
+} else {
+  fuzz_coverage <-
+    fuzz_coverage_raw %>%
+    group_by(fun_name) %>% summarise(lines=n(), hit=sum(value > 0), coverage=hit/lines) %>%
+    select(fun_name, coverage)
+    
+  qs::qsave(fuzz_coverage, FILE_FUZZ_COVERAGE)
+}
+```
+
+```{r}
+coverage_raw <-
+  baseline_coverage_raw %>%
+  select(-pkg) %>%
+  group_by(fun_name, filename, line) %>%
+  summarise(value=sum(value)) %>%
+  ungroup() %>%
+  rename(baseline=value) %>%
+  left_join(
+    select(fuzz_coverage_raw, fun_name, filename, line, fuzz=value),
+    by=c("fun_name", "filename", "line")
+  )
+
+#coverage_raw %>%
+#  filter(baseline == 0, fuzz > 0) %>%
+#  count(fun_name)
+  
+coverage <-
+  select(baseline_coverage, fun_name, baseline=coverage) %>%
+  left_join(
+    select(fuzz_coverage, fun_name, fuzz=coverage), 
+    by="fun_name"
+  )
+```
+
+```{r}
+better_coverage <- coverage %>%
+  filter(fuzz > baseline) %>%
+  mutate(diff = fuzz - baseline)
+
+overview_table(
+  r("Num functions with both coverage", filter(coverage, !is.na(fuzz))),
+  r("Better coverage", better_coverage),
+  r("Better coverage mean", percent(mean(better_coverage$diff)))
+)
+```
 
 ## Plots
+
+```{r}
+
+```
+
