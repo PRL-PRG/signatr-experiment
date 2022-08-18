@@ -20,7 +20,7 @@ source("latextags.R")
 ```
 
 ```{r}
-create_tags(path(TAGS_DIR, "experiment-uf.tex"), prefix = "", default = TRUE)
+create_tags("experiment-uf.tex", prefix = "UF", default = TRUE)
 ```
 
 
@@ -185,10 +185,8 @@ The problem is that the rdb is not saved
 
 ```{r}
 signatures <- 
-  select(all_traces_stats, fun_name) %>%
-  left_join(mutate(fuzz_types, fuzz=TRUE), by="fun_name") %>%
-  full_join(mutate(baseline_types, baseline=TRUE), by=c("fun_name", "signature")) %>%
-  filter(!is.na(signature))
+  mutate(fuzz_types, fuzz=TRUE) %>%
+  full_join(mutate(baseline_types, baseline=TRUE), by=c("fun_name", "signature"))
 
 signatures_summary <-
   group_by(signatures, fun_name) %>%
@@ -197,12 +195,15 @@ signatures_summary <-
     shared=sum(!is.na(fuzz) & !is.na(baseline)),
     only_fuzz=sum(!is.na(fuzz) & is.na(baseline)),
     only_baseline=sum(!is.na(baseline) & is.na(fuzz))
-  )
+  ) %>%
+  right_join(select(all_traces_stats, fun_name), by="fun_name") %>%
+  mutate_if(is.numeric , replace_na, replace = 0)
 ```
 
 ```{r}
 overview_table(
   r("Num functions signatr signatrue", count(fuzz_types, fun_name)),
+  r("Num functions baseline signatrue", filter(signatures_summary, shared > 0 | only_baseline > 0)),
   r("Signatr signatures", fuzz_types),
   r("All signatures", sum(signatures_summary$all)),
   r("Shared signatures", sum(signatures_summary$shared)),
@@ -210,7 +211,8 @@ overview_table(
   r("Only Signatr signatures", sum(signatures_summary$only_fuzz)),
   r("Signatr baseline signatures ratio", sum(signatures_summary$only_fuzz)/sum(signatures_summary$only_baseline)),
   r("Num functions signatr to baseline signature ratio", ratio(count(fuzz_types, fun_name), count(baseline_types, fun_name))),
-  r("Num functions signatr to corpus signature ratio", ratio(count(fuzz_types, fun_name), all_traces_stats))
+  r("Num functions signatr to corpus signature ratio", ratio(count(fuzz_types, fun_name), all_traces_stats)),
+  r("Num functions baseline to corpus signature ratio", ratio(count(baseline_types, fun_name), all_traces_stats))
 )
 ```
 
@@ -311,13 +313,13 @@ coverage <-
     select(fuzz_coverage, fun_name, fuzz=coverage), 
     by="fun_name"
   )
-```
 
-```{r}
 better_coverage <- coverage %>%
   filter(fuzz > baseline) %>%
   mutate(diff = fuzz - baseline)
+```
 
+```{r}
 overview_table(
   r("Num functions with both coverage", filter(coverage, !is.na(fuzz))),
   r("Better coverage", better_coverage),
@@ -328,6 +330,46 @@ overview_table(
 ## Plots
 
 ```{r}
+# http://www.cookbook-r.com/Graphs/Colors_(ggplot2)/#a-colorblind-friendly-palette
+cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
 
+D <- signatures_summary %>%
+  transmute(fun_name, fuzz=shared + only_fuzz, baseline=shared + only_baseline, all) %>%
+  pivot_longer(c(fuzz, baseline)) %>%
+  mutate(value=ifelse(value == 0, 0, 1 + log10(value)))
+
+D_empty <- which(D$all == 0)
+
+D %>%
+ggplot(aes(x = reorder(fun_name, -all, sum), color = name)) +
+    geom_linerange(data = filter(D, name == "baseline"), aes(ymin = 0, ymax = -value), size = .1) +
+    geom_linerange(data = filter(D, name == "fuzz"), aes(ymin = 0, ymax = value), size = .1) +
+    scale_y_continuous(
+      breaks = c(-3, -2, -1 , 0, 1, 2, 3, 4),
+      labels = function(xs) sapply(xs, function(x) ifelse(x == 0, 0, fmt(10**(abs(x) - 1))))
+    ) +
+    scale_color_manual(values = c("#D55E00", "#0072B2"), labels = c("tracing", "fuzzing")) +
+    labs(
+      x = "Functions (each line represents one function)", 
+      y = "# of unique call signatures found by tracing and fuzzing (log scale)",
+      color = ""
+    ) +
+    theme_minimal() +
+    theme(
+        panel.grid.major.x = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.grid.major.y = element_line(linetype = "dotted", size = 0.3, color = "#3A3F4A"),
+        axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        legend.position = "none", #c(.7, .7),
+        legend.direction = "horizontal",
+        legend.text = element_text(size = 14)
+    ) +
+    annotate("text", x = 2500, y = 2.5, label = "Fuzzing", size = 4, fontface = "bold") +
+    annotate("text", x = 2500, y = -2.5, label = "Tracing", size = 4, fontface = "bold") +
+    annotate("rect", xmin = min(D_empty)/2, xmax = max(D_empty)/2, ymin = -1, ymax = 1, alpha = .15) +
+    annotate("text", x = min(D_empty)/2+(max(D_empty)/2-min(D_empty)/2)/2, y = .25, label="no signatures", size = 4, alpha = .6, fontface = "italic")
+
+ggsave("uf-call-signatures.pdf")
 ```
 
