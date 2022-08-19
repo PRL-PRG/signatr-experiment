@@ -194,7 +194,9 @@ signatures_summary <-
     all=n(),
     shared=sum(!is.na(fuzz) & !is.na(baseline)),
     only_fuzz=sum(!is.na(fuzz) & is.na(baseline)),
-    only_baseline=sum(!is.na(baseline) & is.na(fuzz))
+    only_baseline=sum(!is.na(baseline) & is.na(fuzz)),
+    fuzz=sum(!is.na(fuzz)),
+    baseline=sum(!is.na(baseline))
   ) %>%
   right_join(select(all_traces_stats, fun_name), by="fun_name") %>%
   mutate_if(is.numeric , replace_na, replace = 0)
@@ -202,19 +204,26 @@ signatures_summary <-
 
 ```{r}
 overview_table(
-  r("Num functions signatr signatrue", count(fuzz_types, fun_name)),
-  r("Num functions baseline signatrue", filter(signatures_summary, shared > 0 | only_baseline > 0)),
-  r("Signatr signatures", fuzz_types),
+  r("Num functions with signature", filter(signatures_summary, all > 0)),
+  r("Num functions all to corpus signature ratio", ratio(filter(signatures_summary, all > 0), all_traces_stats)),
+  r("Num functions signatr signature", filter(signatures_summary, fuzz > 0)),
+  r("Num functions signatr to corpus signature ratio", ratio(filter(signatures_summary, fuzz > 0), all_traces_stats)),
+  r("Num functions baseline signature", filter(signatures_summary, baseline > 0)),
+  r("Num functions baseline to corpus signature ratio", ratio(filter(signatures_summary, baseline > 0), all_traces_stats)),
+  r("Num functions unique signatr signature", filter(signatures_summary, only_fuzz > 0)),
+  r("Num functions unique baseline signature", filter(signatures_summary, only_baseline > 0)),
+  r("Num functions only signatr signature", filter(signatures_summary, fuzz > 0, baseline == 0)),
+  r("Num functions only baseline signature", filter(signatures_summary, baseline > 0, fuzz == 0)),
+  r("Num functions fuzz new signatures over baseline", filter(signatures_summary, baseline > 0, only_fuzz > 0)),
+  r("Num functions both", filter(signatures_summary, baseline > 0, fuzz > 0)),
+  r("Signatr signatures", sum(signatures_summary$fuzz)),
+  r("Baseline signatures", sum(signatures_summary$baseline)),
   r("All signatures", sum(signatures_summary$all)),
   r("Shared signatures", sum(signatures_summary$shared)),
   r("Only Baseline signatures", sum(signatures_summary$only_baseline)),
   r("Only Signatr signatures", sum(signatures_summary$only_fuzz)),
   r("Signatr baseline signatures ratio", sum(signatures_summary$only_fuzz)/sum(signatures_summary$only_baseline)),
-  r("Num functions signatr to baseline signature ratio", ratio(count(fuzz_types, fun_name), count(baseline_types, fun_name))),
-  r("Num functions signatr to corpus signature ratio", ratio(count(fuzz_types, fun_name), all_traces_stats)),
-  r("Num functions baseline to corpus signature ratio", ratio(count(baseline_types, fun_name), all_traces_stats)),
   r("Avg new signatr signature", mean(filter(signatures_summary, only_fuzz > 0)$only_fuzz)),
-  r("Shared signatues", sum(signatures_summary$shared)),
   r("Shared signatues functions", filter(signatures_summary, shared > 0)),
   r("Num Missing Function Signatr", nrow(all_traces_stats) - nrow(count(fuzz_types, fun_name)))
 )
@@ -321,13 +330,16 @@ coverage <-
 better_coverage <- coverage %>%
   filter(fuzz > baseline) %>%
   mutate(diff = fuzz - baseline)
+
+signatures_summary_better_coverage <- semi_join(signatures_summary, better_coverage, by="fun_name")
 ```
 
 ```{r}
 overview_table(
   r("Num functions with both coverage", filter(coverage, !is.na(fuzz))),
   r("Better coverage", better_coverage),
-  r("Better coverage mean", percent(mean(better_coverage$diff)))
+  r("Better coverage mean", percent(mean(better_coverage$diff))),
+  r("New signatr signatures for better coverage ratio", mean(signatures_summary_better_coverage$fuzz - signatures_summary_better_coverage$baseline))
 )
 ```
 
@@ -346,8 +358,8 @@ D_empty <- which(D$all == 0)
 
 D %>%
 ggplot(aes(x = reorder(fun_name, all, sum), color = name)) +
-    geom_linerange(data = filter(D, name == "baseline"), aes(ymin = 0, ymax = -value), size = .1) +
-    geom_linerange(data = filter(D, name == "fuzz"), aes(ymin = 0, ymax = value), size = .1) +
+    geom_linerange(data = filter(D, name == "baseline"), aes(ymin = 0, ymax = -value), size = .1, alpha = .5) +
+    geom_linerange(data = filter(D, name == "fuzz"), aes(ymin = 0, ymax = value), size = .1, alpha = .5) +
     scale_y_continuous(
       breaks = c(-3, -2, -1 , 0, 1, 2, 3, 4),
       labels = function(xs) sapply(xs, function(x) ifelse(x == 0, 0, fmt(10**(abs(x) - 1))))
@@ -370,11 +382,11 @@ ggplot(aes(x = reorder(fun_name, all, sum), color = name)) +
         legend.direction = "horizontal",
         legend.text = element_text(size = 14)
     ) +
-    annotate("text", x = 500, y = 0.5, label = "Fuzzing", size = 4) +
-    annotate("text", x = 500, y = -0.5, label = "Tracing", size = 4)
+    annotate("text", x = 500, y = .5, label = "fuzzing ⇢", size = 4) +
+    annotate("text", x = 500, y = -.5, label = "⇠ tracing", size = 4)
     #annotate("rect", xmin = min(D_empty)/2, xmax = max(D_empty)/2, ymin = -1, ymax = 1, alpha = .15) +
     #annotate("text", x = min(D_empty)/2+(max(D_empty)/2-min(D_empty)/2)/2, y = .25, label="no signatures", size = 4, alpha = .6, fontface = "italic")
 
-ggsave("uf-call-signatures.pdf", width = 6)
+ggsave("uf-call-signatures.pdf", height = 6)
 ```
 
