@@ -11,6 +11,7 @@ RUN DEBIAN_FRONTEND=noninteractive \
     locales \
     libharfbuzz-dev \
     libfribidi-dev \
+    pandoc \
     rr
 
 RUN update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-8 8 && \
