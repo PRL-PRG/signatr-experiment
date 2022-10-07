@@ -1,0 +1,14 @@
+callr
+cli
+devtools
+DT
+ggplot2
+knitr
+pbapply
+pkgload
+progress
+purrr
+qs
+roxygen2
+testthat
+tidyverse
