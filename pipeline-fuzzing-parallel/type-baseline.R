@@ -1,36 +1,18 @@
 #!/usr/bin/env Rscript
 
-suppressPackageStartupMessages(library(dplyr))
+output_dir <- "data/baseline-types"
+traces_file <- commandArgs(trailingOnly = TRUE)[1]
+types <- signatr::traces_type(traces_file, signatr:::type_system_tastr, "../data/db/cran_db-6")
 
-callids_file <- commandArgs(trailingOnly = TRUE)[1]
-baseline_file <- tools::file_path_sans_ext(callids_file)
-callids <- readr::read_csv(callids_file, col_names = c("cid", "pkg", "fun", "param", "vid"))
-corpus <- readr::read_csv("data/corpus.csv")
-callids <- semi_join(callids, corpus, by = c("pkg" = "pkg_name", "fun" = "fun_name"))
-
-if (nrow(callids) == 0) {
+if (length(types) == 0) {
     q(save = "no")
 }
 
-traces <- callids %>%
-    group_by(cid, pkg, fun) %>%
-    filter(!any(vid == -1)) %>%
-    summarise(
-        args_idx = {
-            tmp <- as.integer(vid[-n()])
-            names(tmp) <- param[-n()]
-            list(tmp)
-        },
-        error = NA,
-        exit = NA,
-        status = 0,
-        result = vid[n()],
-        fun_name = paste0(pkg[1], "::", fun[1]),
-        dispatch = list(list()),
-        rdb_path = paste0(baseline_file, ".sxpdb")
-    ) %>%
-    ungroup() %>%
-    select(-pkg, -fun) %>%
-    rename(id = cid)
+if (!dir.exists(output_dir)) {
+    dir.create(output_dir, recursive = TRUE)
+}
 
-qs::qsave(traces, file.path("data/baseline-traces", basename(baseline_file)))
+types <- lapply(types, function(x) subset(x, select=c(fun_name, signature)))
+types <- do.call(rbind, types)
+
+qs::qsave(types, file.path(output_dir, basename(traces_file)))

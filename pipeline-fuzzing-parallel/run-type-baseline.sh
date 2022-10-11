@@ -5,7 +5,7 @@ INPUT=data/baseline
 
 mkdir -p "$OUTPUT"
 
-find $INPUT -maxdepth 1 -name '*.callids' | \
+find $INPUT -maxdepth 1 -name '*.traces' | \
   parallel \
     --results "$OUTPUT/run.csv" \
     --jobs 64 \
