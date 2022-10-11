@@ -69,7 +69,7 @@ RUN git clone https://github.com/PRL-PRG/sxpdb && \
   make -C sxpdb install
 
 # install argtracer
-RUN git clone https://github.com/PRL-PRG/argtracer && \
+RUN git clone -b call-ids https://github.com/PRL-PRG/argtracer && \
   make -C argtracer install
 
 # install generatr
