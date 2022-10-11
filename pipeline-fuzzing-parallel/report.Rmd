@@ -144,16 +144,14 @@ FILE_BASELINE_TYPES <- "data/preprocessed/baseline-types.qs"
 if (file.exists(FILE_BASELINE_TYPES)) {
   baseline_types <- qs::qread(FILE_BASELINE_TYPES)
 } else {
-  baseline_types_raw <- 
-    unlist(pblapply(list.files("data/baseline-types", pattern = "\\.R$", full.names = TRUE, recursive = FALSE), qs::qread), recursive = FALSE) %>%
-    pblapply(function(x) select(x, fun_name, signature))
+  baseline_types_raw <-
+    pblapply(list.files("data/baseline-types", pattern = "\\.traces$", full.names = TRUE, recursive = FALSE), qs::qread) %>%
+    bind_rows()
   
-  baseline_types <- pblapply(
-    names(baseline_types_raw), 
-    function(x) bind_rows(baseline_types_raw[names(baseline_types_raw) == x])
-  ) %>% bind_rows()
+  baseline_types <- 
+    semi_join(baseline_types_raw, all_traces_stats, by="fun_name") %>% 
+    distinct(fun_name, signature)
   
-  baseline_types <- semi_join(baseline_types, all_traces_stats, by="fun_name") %>% distinct(fun_name, signature)
   qs::qsave(baseline_types, FILE_BASELINE_TYPES)
 }
 ```
