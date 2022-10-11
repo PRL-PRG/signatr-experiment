@@ -76,6 +76,10 @@ RUN git clone https://github.com/PRL-PRG/argtracer && \
 RUN git clone https://github.com/reallyTG/generatr && \
   make -C generatr install
 
+# install runr
+RUN git clone https://github.com/PRL-PRG/runr && \
+  make -C runr install
+
 # install signatr
 RUN git clone https://github.com/PRL-PRG/signatr && \
   make -C signatr install
